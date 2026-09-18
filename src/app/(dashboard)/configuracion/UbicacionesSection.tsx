@@ -132,9 +132,9 @@ export function UbicacionesSection() {
   }
 
   return (
-    <div className="flex flex-col gap-5 md:flex-row">
+    <div className="flex flex-col gap-5 min-[1001px]:flex-row">
       {/* Columna izquierda: países -- siempre visible, no se mueve al elegir uno (2026-09-10). */}
-      <div className="flex flex-col gap-2 md:w-[300px] md:flex-shrink-0">
+      <div className="flex flex-col gap-2 min-[1001px]:w-[300px] min-[1001px]:flex-shrink-0">
         <div className="flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface shadow-[0_1px_3px_rgba(12,12,12,.04)] transition-shadow hover:shadow-[0_2px_10px_rgba(12,12,12,.07)]">
           <div className="border-b border-[#EFEDE7] bg-gray-light px-3 py-2.5">
             <div className="flex gap-1.5">

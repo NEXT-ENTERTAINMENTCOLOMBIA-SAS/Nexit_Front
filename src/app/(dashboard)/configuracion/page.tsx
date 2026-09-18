@@ -95,8 +95,8 @@ export default function ConfiguracionPage() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-5 md:flex-row md:items-start">
-        <nav className="flex flex-shrink-0 flex-row flex-wrap gap-1 rounded-[var(--radius-lg)] border border-border bg-surface p-1.5 shadow-[0_1px_3px_rgba(12,12,12,.04)] md:w-[272px] md:flex-col md:flex-nowrap">
+      <div className="flex flex-col gap-5 min-[1001px]:flex-row min-[1001px]:items-start">
+        <nav className="flex flex-shrink-0 flex-row flex-wrap gap-1 rounded-[var(--radius-lg)] border border-border bg-surface p-1.5 shadow-[0_1px_3px_rgba(12,12,12,.04)] min-[1001px]:w-[272px] min-[1001px]:flex-col min-[1001px]:flex-nowrap">
           {SECCIONES.map((s) => {
             const activa = seccion === s.id;
             const conteo = conteos[s.id];
