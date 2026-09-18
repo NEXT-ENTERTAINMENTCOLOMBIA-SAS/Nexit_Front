@@ -113,7 +113,7 @@ export function EtapasClienteSection() {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface transition-shadow hover:shadow-[0_1px_6px_rgba(12,12,12,.05)]">
+      <div className="flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface shadow-[0_1px_3px_rgba(12,12,12,.04)] transition-shadow hover:shadow-[0_2px_10px_rgba(12,12,12,.07)]">
         <div className="flex items-center gap-2 border-b border-[#EFEDE7] bg-gray-light px-4 py-2.5">
           <Input
             value={nombre}

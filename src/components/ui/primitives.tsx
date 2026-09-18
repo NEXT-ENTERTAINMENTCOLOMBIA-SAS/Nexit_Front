@@ -207,7 +207,7 @@ export function StatCard({
   icon?: LucideIcon;
 }) {
   return (
-    <div className="relative min-h-[80px] overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface px-4 py-3.5 transition-shadow hover:shadow-[0_1px_4px_rgba(12,12,12,.06)]">
+    <div className="relative min-h-[80px] overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface px-4 py-3.5 shadow-[0_1px_3px_rgba(12,12,12,.04)] transition-shadow hover:shadow-[0_2px_10px_rgba(12,12,12,.07)]">
       {Icon && (
         <span
           className="absolute right-3.5 top-3.5 flex h-7 w-7 items-center justify-center rounded-full bg-gray-light"

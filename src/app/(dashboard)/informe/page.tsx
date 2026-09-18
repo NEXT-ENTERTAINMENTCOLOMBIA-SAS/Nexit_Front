@@ -190,7 +190,7 @@ export default function InformePage() {
       <h1 className={styles.h1}>Informes</h1>
       <p className="mb-5 text-[13px] text-text-2">El resumen en vivo, listo para guardar y exportar a Excel.</p>
 
-      <div className="mb-5 flex flex-wrap items-center gap-3 rounded-[var(--radius-lg)] border border-border bg-surface px-4.5 py-4">
+      <div className="mb-5 flex flex-wrap items-center gap-3 rounded-[var(--radius-lg)] border border-border bg-surface px-4.5 py-4 shadow-[0_1px_3px_rgba(12,12,12,.04)]">
         <TabsShell>
           <TabButton active={mode === "semanal"} onClick={() => setMode("semanal")}>
             Semanal
@@ -229,27 +229,37 @@ export default function InformePage() {
       ) : (
         <div className="flex flex-col gap-5">
           <div className={styles.kpis}>
-            <StatCard n={current.totalProveedores} label="Proveedores" icon={Truck} />
-            <StatCard n={current.totalClientes} label="Clientes" icon={Building2} />
-            <StatCard n={current.totalProyectos} label="Proyectos" icon={Folders} />
+            <StatCard n={current.totalProveedores} label="Proveedores" icon={Truck} accent="#4A4845" />
+            <StatCard n={current.totalClientes} label="Clientes" icon={Building2} accent="#036B3C" />
+            <StatCard n={current.totalProyectos} label="Proyectos" icon={Folders} accent="#0C0C0C" />
             <StatCard
               n={current.proyectosSinProveedor}
               label="Sin proveedor"
               icon={FileWarning}
-              accent={current.proyectosSinProveedor > 0 ? "#8A2525" : undefined}
+              accent={current.proyectosSinProveedor > 0 ? "#8A2525" : "#4A4845"}
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-3.5 min-[1001px]:grid-cols-[1.1fr_1fr_1fr]">
-            <div className="flex flex-col items-center gap-3.5 rounded-[var(--radius-lg)] border border-border bg-surface p-4.5 transition-shadow hover:shadow-[0_1px_6px_rgba(12,12,12,.05)]">
-              <div className="self-start text-sm font-semibold">Distribución de proyectos por estado</div>
-              <div className="relative flex h-[160px] w-[160px] items-center justify-center rounded-full" style={{ background: donutGradient }}>
-                <div className="flex h-[108px] w-[108px] flex-col items-center justify-center rounded-full bg-surface shadow-[inset_0_0_0_1px_rgba(12,12,12,.05)]">
-                  <span className="text-[24px] font-semibold leading-none tracking-[-0.02em]">{donutTotal}</span>
+          {/* Rediseño 2026-09-18 (Alicia: "los dashboards tienen que quedar bien... investigues sobre
+              diseño, estéticas"): la dona pasa a ser la pieza "hero" -- el bloque más grande de la
+              grilla, como recomienda cualquier guía de dashboards ("reserva el bloque más grande
+              para la tendencia más importante" en vez de competir tres gráficos del mismo tamaño) --
+              y las dos barras de desglose se apilan a la derecha, más angostas, como contexto de
+              apoyo. Sombra suave permanente (no solo al pasar el mouse) para que las tarjetas se
+              sientan con más cuerpo, sin salirse de la paleta neutra del resto de la app. */}
+          <div className="grid grid-cols-1 gap-3.5 min-[1001px]:grid-cols-[1.3fr_1fr]">
+            <div className="flex flex-col items-center gap-4 rounded-[var(--radius-lg)] border border-border bg-surface p-5 shadow-[0_1px_3px_rgba(12,12,12,.04)] transition-shadow hover:shadow-[0_2px_10px_rgba(12,12,12,.07)]">
+              <div className="self-start">
+                <div className="text-sm font-semibold">Distribución de proyectos por estado</div>
+                <div className="mt-0.5 text-[11.5px] text-text-3">Todos los proyectos activos, agrupados por su estado actual.</div>
+              </div>
+              <div className="relative flex h-[190px] w-[190px] items-center justify-center rounded-full" style={{ background: donutGradient }}>
+                <div className="flex h-[130px] w-[130px] flex-col items-center justify-center rounded-full bg-surface shadow-[inset_0_0_0_1px_rgba(12,12,12,.05)]">
+                  <span className="text-[28px] font-semibold leading-none tracking-[-0.02em]">{donutTotal}</span>
                   <span className="mt-1 font-mono text-[9.5px] uppercase tracking-[0.06em] text-text-3">proyectos</span>
                 </div>
               </div>
-              <div className="flex w-full flex-col gap-1">
+              <div className="grid w-full grid-cols-1 gap-1 sm:grid-cols-2">
                 {donutSegs.map((g) => (
                   <div key={g.label} className="flex items-center gap-2 rounded-[var(--radius-md)] px-1.5 py-1 text-xs transition-colors hover:bg-bg">
                     <span className="h-[9px] w-[9px] flex-shrink-0 rounded-full" style={{ background: g.color }} />
@@ -261,48 +271,50 @@ export default function InformePage() {
               </div>
             </div>
 
-            <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-4.5 transition-shadow hover:shadow-[0_1px_6px_rgba(12,12,12,.05)]">
-              <div className="mb-4 flex items-center justify-between">
-                <div className="text-sm font-semibold">Por estado del proyecto</div>
-                <span className="font-mono text-[11px] text-text-3">{current.totalProyectos} total</span>
-              </div>
-              {estadoRows.length === 0 && <p className="text-sm text-text-3">Sin datos todavía.</p>}
-              {estadoRows.map((r) => (
-                <div key={r.label} className="mb-3 last:mb-0">
-                  <div className="mb-1.5 flex items-center justify-between text-[12.5px]">
-                    <span className="text-text-2">{r.label}</span>
-                    <span className="font-semibold">{r.count}</span>
-                  </div>
-                  <div className="h-[7px] overflow-hidden rounded-[20px] bg-[#EFEDE7]">
-                    <div
-                      className="h-full rounded-[20px] transition-[width] duration-300"
-                      style={{ width: `${Math.round((r.count / estadoMax) * 100)}%`, background: r.c }}
-                    />
-                  </div>
+            <div className="flex flex-col gap-3.5">
+              <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-4.5 shadow-[0_1px_3px_rgba(12,12,12,.04)] transition-shadow hover:shadow-[0_2px_10px_rgba(12,12,12,.07)]">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="text-sm font-semibold">Por estado del proyecto</div>
+                  <span className="font-mono text-[11px] text-text-3">{current.totalProyectos} total</span>
                 </div>
-              ))}
-            </div>
+                {estadoRows.length === 0 && <p className="text-sm text-text-3">Sin datos todavía.</p>}
+                {estadoRows.map((r) => (
+                  <div key={r.label} className="mb-3 last:mb-0">
+                    <div className="mb-1.5 flex items-center justify-between text-[12.5px]">
+                      <span className="text-text-2">{r.label}</span>
+                      <span className="font-semibold">{r.count}</span>
+                    </div>
+                    <div className="h-[7px] overflow-hidden rounded-[20px] bg-[#EFEDE7]">
+                      <div
+                        className="h-full rounded-[20px] transition-[width] duration-300"
+                        style={{ width: `${Math.round((r.count / estadoMax) * 100)}%`, background: r.c }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-            <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-4.5 transition-shadow hover:shadow-[0_1px_6px_rgba(12,12,12,.05)]">
-              <div className="mb-4 flex items-center justify-between">
-                <div className="text-sm font-semibold">Por estado del brief</div>
-                <span className="font-mono text-[11px] text-text-3">{briefRows.reduce((a, r) => a + r.count, 0)} total</span>
-              </div>
-              {briefRows.length === 0 && <p className="text-sm text-text-3">Sin datos todavía.</p>}
-              {briefRows.map((r) => (
-                <div key={r.label} className="mb-3 last:mb-0">
-                  <div className="mb-1.5 flex items-center justify-between text-[12.5px]">
-                    <span className="text-text-2">{r.label}</span>
-                    <span className="font-semibold">{r.count}</span>
-                  </div>
-                  <div className="h-[7px] overflow-hidden rounded-[20px] bg-[#EFEDE7]">
-                    <div
-                      className="h-full rounded-[20px] transition-[width] duration-300"
-                      style={{ width: `${Math.round((r.count / briefMax) * 100)}%`, background: r.c }}
-                    />
-                  </div>
+              <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-4.5 shadow-[0_1px_3px_rgba(12,12,12,.04)] transition-shadow hover:shadow-[0_2px_10px_rgba(12,12,12,.07)]">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="text-sm font-semibold">Por estado del brief</div>
+                  <span className="font-mono text-[11px] text-text-3">{briefRows.reduce((a, r) => a + r.count, 0)} total</span>
                 </div>
-              ))}
+                {briefRows.length === 0 && <p className="text-sm text-text-3">Sin datos todavía.</p>}
+                {briefRows.map((r) => (
+                  <div key={r.label} className="mb-3 last:mb-0">
+                    <div className="mb-1.5 flex items-center justify-between text-[12.5px]">
+                      <span className="text-text-2">{r.label}</span>
+                      <span className="font-semibold">{r.count}</span>
+                    </div>
+                    <div className="h-[7px] overflow-hidden rounded-[20px] bg-[#EFEDE7]">
+                      <div
+                        className="h-full rounded-[20px] transition-[width] duration-300"
+                        style={{ width: `${Math.round((r.count / briefMax) * 100)}%`, background: r.c }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -316,7 +328,7 @@ export default function InformePage() {
                 {savedReports.map((r) => (
                   <div
                     key={r.key}
-                    className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-border bg-surface px-4 py-3.5 transition-shadow hover:shadow-[0_1px_6px_rgba(12,12,12,.05)]"
+                    className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-border bg-surface px-4 py-3.5 shadow-[0_1px_3px_rgba(12,12,12,.04)] transition-shadow hover:shadow-[0_2px_10px_rgba(12,12,12,.07)]"
                   >
                     <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gray-light text-text-2">
                       <BarChart3 size={17} strokeWidth={1.7} />

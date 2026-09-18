@@ -34,13 +34,13 @@ type Seccion = "ubicaciones" | "categorias-proveedor" | "servicios" | "estados-p
  * 3. Ubicaciones pasó de apilar país->región->ciudad verticalmente (cada clic empujaba todo hacia
  *    abajo) a un panel de dos columnas que no crece -- ver `UbicacionesSection`.
  */
-const SECCIONES: { id: Seccion; label: string; icon: typeof MapPin }[] = [
-  { id: "ubicaciones", label: "Ubicaciones", icon: MapPin },
-  { id: "categorias-proveedor", label: "Categorías de proveedor", icon: Tags },
-  { id: "servicios", label: "Servicios", icon: Wrench },
-  { id: "estados-proveedor", label: "Estados de proveedor", icon: Truck },
-  { id: "estados-proyecto", label: "Fases y estados de proyecto", icon: CalendarCheck2 },
-  { id: "etapas-cliente", label: "Etapas de proceso comercial", icon: Building2 },
+const SECCIONES: { id: Seccion; label: string; icon: typeof MapPin; descripcion: string }[] = [
+  { id: "ubicaciones", label: "Ubicaciones", icon: MapPin, descripcion: "Países, regiones y ciudades -- alimentan los selectores de ubicación de Clientes y Proveedores." },
+  { id: "categorias-proveedor", label: "Categorías de proveedor", icon: Tags, descripcion: "Aparecen en el desplegable \u201cCategoría\u201d del formulario de Proveedor." },
+  { id: "servicios", label: "Servicios", icon: Wrench, descripcion: "El catálogo de servicios que puede ofrecer un proveedor." },
+  { id: "estados-proveedor", label: "Estados de proveedor", icon: Truck, descripcion: "Aparecen en el desplegable \u201cEstado\u201d del formulario de Proveedor." },
+  { id: "estados-proyecto", label: "Fases y estados de proyecto", icon: CalendarCheck2, descripcion: "El recorrido completo de un proyecto, agrupado en fases -- alimenta \u201cEstado del proyecto\u201d." },
+  { id: "etapas-cliente", label: "Etapas de proceso comercial", icon: Building2, descripcion: "Las etapas previas a que exista un brief -- distintas del estado del cliente (Activo/Prospecto/Inactivo)." },
 ];
 
 export default function ConfiguracionPage() {
@@ -96,7 +96,7 @@ export default function ConfiguracionPage() {
       </div>
 
       <div className="flex flex-col gap-5 md:flex-row md:items-start">
-        <nav className="flex flex-shrink-0 flex-row flex-wrap gap-1 rounded-[var(--radius-lg)] border border-border bg-surface p-1.5 md:w-[272px] md:flex-col md:flex-nowrap">
+        <nav className="flex flex-shrink-0 flex-row flex-wrap gap-1 rounded-[var(--radius-lg)] border border-border bg-surface p-1.5 shadow-[0_1px_3px_rgba(12,12,12,.04)] md:w-[272px] md:flex-col md:flex-nowrap">
           {SECCIONES.map((s) => {
             const activa = seccion === s.id;
             const conteo = conteos[s.id];
@@ -120,6 +120,24 @@ export default function ConfiguracionPage() {
         </nav>
 
         <div className="min-w-0 flex-1">
+          {/* Encabezado de sección (2026-09-18, Alicia: "que mires bien todos los diseños... que
+              todo quede súper chévere"): antes el panel de la derecha caía directo en la lista, sin
+              decir para qué sirve ese catálogo -- ahora repite el nombre y explica en una línea
+              dónde se usa, como cualquier guía de settings recomienda ("group by task, one-line
+              helper text"), así uno no tiene que adivinarlo mirando el riel de la izquierda. */}
+          {(() => {
+            const activa = SECCIONES.find((s) => s.id === seccion)!;
+            return (
+              <div className="mb-3.5">
+                <div className="flex items-center gap-2 text-[15px] font-semibold">
+                  <activa.icon size={15} strokeWidth={1.8} className="text-text-3" />
+                  {activa.label}
+                </div>
+                <p className="mt-1 text-[12.5px] text-text-3">{activa.descripcion}</p>
+              </div>
+            );
+          })()}
+
           {seccion === "ubicaciones" && <UbicacionesSection />}
 
           {seccion === "categorias-proveedor" && (
