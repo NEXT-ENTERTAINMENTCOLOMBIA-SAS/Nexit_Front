@@ -39,6 +39,8 @@ export function CatalogList({
   selectable = false,
   selectedId = null,
   onSelect,
+  accent = "var(--text)",
+  accentLight = "var(--gray-light)",
 }: {
   items: ItemCatalogo[];
   /** Nombre en plural de lo que contiene esta lista, para el contador ("12 categorías"). */
@@ -52,6 +54,14 @@ export function CatalogList({
   selectable?: boolean;
   selectedId?: string | null;
   onSelect?: (item: ItemCatalogo) => void;
+  /** Color de acento del grupo de Configuración al que pertenece este catálogo (2026-09-18,
+   *  Alicia: "el resto de cosas acá no están manejando la misma paleta de colores con el resto
+   *  del sistema") -- tiñe la fila de "agregar" y la fila seleccionada con el mismo color del
+   *  grupo activo en el riel, para que todo el panel se sienta de una sola pieza, no solo el
+   *  encabezado de arriba. Con valores por defecto neutros para cualquier otro uso de esta lista
+   *  que no pase estos props. */
+  accent?: string;
+  accentLight?: string;
 }) {
   const pushToast = useUiStore((s) => s.pushToast);
   const [draft, setDraft] = useState("");
@@ -120,7 +130,7 @@ export function CatalogList({
     <div className="flex flex-col gap-2">
       <div className="flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface shadow-[0_1px_3px_rgba(12,12,12,.04)] transition-shadow hover:shadow-[0_2px_10px_rgba(12,12,12,.07)]">
         {/* Agregar es la primera fila -- siempre a la vista, sin bajar con scroll (2026-09-10). */}
-        <div className="flex items-center gap-2 border-b border-[#EFEDE7] bg-gray-light px-4 py-2.5">
+        <div className="flex items-center gap-2 border-b border-[#EFEDE7] px-4 py-2.5" style={{ background: accentLight }}>
           <Input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -162,9 +172,8 @@ export function CatalogList({
           {visibles.map((item, idx) => (
           <div
             key={item.id}
-            className={`flex items-center gap-2 px-4 py-2.5 ${idx !== visibles.length - 1 ? "border-b border-[#EFEDE7]" : ""} ${
-              selectable && selectedId === item.id ? "bg-gray-light" : ""
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 ${idx !== visibles.length - 1 ? "border-b border-[#EFEDE7]" : ""}`}
+            style={selectable && selectedId === item.id ? { background: accentLight } : undefined}
           >
             {editingId === item.id ? (
               <>
@@ -192,7 +201,7 @@ export function CatalogList({
                   onClick={() => onSelect?.(item)}
                   className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
                 >
-                  <MapPin size={13} strokeWidth={1.8} className={selectedId === item.id ? "text-teal-mid" : "text-text-3"} />
+                  <MapPin size={13} strokeWidth={1.8} className={selectedId !== item.id ? "text-text-3" : undefined} style={selectedId === item.id ? { color: accent } : undefined} />
                   <span className={`truncate text-[13px] ${selectedId === item.id ? "font-semibold text-text" : ""}`}>{item.nombre}</span>
                   <ChevronRight size={13} strokeWidth={1.8} className="flex-shrink-0 text-text-3" />
                 </button>

@@ -186,6 +186,8 @@ export default function ConfiguracionPage() {
               onAdd={addCategoria}
               onUpdate={updateCategoria}
               onRemove={(id) => removeCatalogo("categorias-proveedor", id)}
+              accent="var(--amber)"
+              accentLight="var(--amber-light)"
             />
           )}
 
@@ -198,6 +200,8 @@ export default function ConfiguracionPage() {
               onAdd={addServicio}
               onUpdate={updateServicio}
               onRemove={(id) => removeCatalogo("servicios", id)}
+              accent="var(--amber)"
+              accentLight="var(--amber-light)"
             />
           )}
 
@@ -214,6 +218,8 @@ export default function ConfiguracionPage() {
               onAdd={addEstadoProveedor}
               onUpdate={updateEstadoProveedor}
               onRemove={(id) => removeCatalogo("estados-proveedor", id)}
+              accent="var(--amber)"
+              accentLight="var(--amber-light)"
             />
           )}
 

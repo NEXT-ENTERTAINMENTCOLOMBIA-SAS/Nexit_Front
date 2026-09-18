@@ -136,7 +136,7 @@ export function UbicacionesSection() {
       {/* Columna izquierda: países -- siempre visible, no se mueve al elegir uno (2026-09-10). */}
       <div className="flex flex-col gap-2 min-[1001px]:w-[300px] min-[1001px]:flex-shrink-0">
         <div className="flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface shadow-[0_1px_3px_rgba(12,12,12,.04)] transition-shadow hover:shadow-[0_2px_10px_rgba(12,12,12,.07)]">
-          <div className="border-b border-[#EFEDE7] bg-gray-light px-3 py-2.5">
+          <div className="border-b border-[#EFEDE7] px-3 py-2.5" style={{ background: "var(--blue-light)" }}>
             <div className="flex gap-1.5">
               <Input
                 value={nuevoPaisNombre}
@@ -177,7 +177,11 @@ export function UbicacionesSection() {
               <div className="px-4 py-3.5 text-sm text-text-3">Nada que coincida con &ldquo;{busquedaPais}&rdquo;.</div>
             )}
             {paisesVisibles.map((p, idx) => (
-              <div key={p.id} className={`flex items-center gap-1.5 px-3 py-2.5 ${idx !== paisesVisibles.length - 1 ? "border-b border-[#EFEDE7]" : ""} ${paisId === p.id ? "bg-gray-light" : ""}`}>
+              <div
+                key={p.id}
+                className={`flex items-center gap-1.5 px-3 py-2.5 ${idx !== paisesVisibles.length - 1 ? "border-b border-[#EFEDE7]" : ""}`}
+                style={paisId === p.id ? { background: "var(--blue-light)" } : undefined}
+              >
                 {editandoPais?.id === p.id ? (
                   <div className="flex w-full flex-col gap-1.5">
                     <Input value={editNombre} onChange={(e) => setEditNombre(e.target.value)} placeholder="País" className="h-8" />
@@ -190,7 +194,7 @@ export function UbicacionesSection() {
                 ) : (
                   <>
                     <button type="button" onClick={() => elegirPais(p.id)} className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 text-left">
-                      <MapPin size={13} strokeWidth={1.8} className={paisId === p.id ? "text-teal-mid" : "text-text-3"} />
+                      <MapPin size={13} strokeWidth={1.8} className={paisId !== p.id ? "text-text-3" : undefined} style={paisId === p.id ? { color: "var(--blue)" } : undefined} />
                       <span className={`min-w-0 truncate text-[13px] ${paisId === p.id ? "font-semibold text-text" : ""}`}>{p.nombre}</span>
                       <ChevronRight size={13} strokeWidth={1.8} className="flex-shrink-0 text-text-3" />
                     </button>
@@ -231,6 +235,8 @@ export function UbicacionesSection() {
               selectable
               selectedId={regionId || null}
               onSelect={(item) => setRegionId(item.id)}
+              accent="var(--blue)"
+              accentLight="var(--blue-light)"
             />
           </div>
         )}
@@ -252,6 +258,8 @@ export function UbicacionesSection() {
               onAdd={(nombre) => addCiudad({ regionId, nombre })}
               onUpdate={(id, nombre) => updateCiudad(id, { regionId, nombre })}
               onRemove={(id) => removeCatalogo("ciudades", id)}
+              accent="var(--blue)"
+              accentLight="var(--blue-light)"
             />
           </div>
         )}

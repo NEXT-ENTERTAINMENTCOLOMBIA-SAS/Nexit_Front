@@ -114,7 +114,7 @@ export function EtapasClienteSection() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface shadow-[0_1px_3px_rgba(12,12,12,.04)] transition-shadow hover:shadow-[0_2px_10px_rgba(12,12,12,.07)]">
-        <div className="flex items-center gap-2 border-b border-[#EFEDE7] bg-gray-light px-4 py-2.5">
+        <div className="flex items-center gap-2 border-b border-[#EFEDE7] px-4 py-2.5" style={{ background: "var(--success-light)" }}>
           <Input
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
