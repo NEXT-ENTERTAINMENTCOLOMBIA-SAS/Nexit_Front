@@ -116,6 +116,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
   }, [menuOpen]);
 
+  // Buscador inteligente (2026-09-18): este useMemo tiene que quedar ANTES del "return null" de
+  // abajo -- React exige llamar los mismos Hooks, en el mismo orden, en cada render (Rules of
+  // Hooks). Antes vivía después del early return, así que en el primer render (todavía sin
+  // `hydrated`/`user`) este Hook ni se llamaba, y en el siguiente render sí -- React lo detecta
+  // como "el Hook #36 cambió de useMemo a undefined" y tira el warning/error de la consola.
+  const suggestions = useMemo(
+    () => (toolbar?.getSuggestions && globalSearch.trim() ? toolbar.getSuggestions(globalSearch.trim()) : []),
+    [toolbar, globalSearch],
+  );
+
   // "cargando" incluido a propósito: hasta saber si tiene perfil no se pinta el dashboard, para
   // no mostrar medio segundo de interfaz a alguien que en realidad va camino a /registro.
   if (!hydrated || !user || estadoPerfil === "cargando" || estadoPerfil === "sin-perfil" || estadoPerfil === "inactivo") return null;
@@ -130,11 +140,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setSuggestOpen(false);
     toolbar?.onSelectSuggestion?.(s);
   }
-
-  const suggestions = useMemo(
-    () => (toolbar?.getSuggestions && globalSearch.trim() ? toolbar.getSuggestions(globalSearch.trim()) : []),
-    [toolbar, globalSearch],
-  );
 
   return (
     <div className={clsx(styles.shell, railExpanded && styles.expanded)}>
