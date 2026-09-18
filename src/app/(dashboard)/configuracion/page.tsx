@@ -102,6 +102,13 @@ export default function ConfiguracionPage() {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* MARCA TEMPORAL DE DIAGNÓSTICO -- Claude, 2026-09-18: si NO ves esta franja roja después de
+          reiniciar `npm run dev` y recargar con Ctrl+Shift+R, el problema no es el diseño -- es que
+          tu navegador/servidor no está sirviendo este archivo en absoluto (otro proceso viejo
+          corriendo en el mismo puerto, otra carpeta, etc.). Bórrala avisándome apenas la veas. */}
+      <div className="rounded-[var(--radius-lg)] bg-red px-4 py-2 text-center text-[13px] font-bold text-white">
+        PRUEBA DE DIAGNÓSTICO -- si ves esta franja roja, el archivo SÍ se está actualizando
+      </div>
       <div>
         <div className="mb-1 font-mono text-[11px] uppercase tracking-widest text-text-3">Catálogos</div>
         <h1 className={styles.h1}>Configuración</h1>
