@@ -11,6 +11,7 @@ import { EstadosProyectoSection } from "./EstadosProyectoSection";
 import { EtapasClienteSection } from "./EtapasClienteSection";
 
 type Seccion = "ubicaciones" | "categorias-proveedor" | "servicios" | "estados-proveedor" | "estados-proyecto" | "etapas-cliente";
+type Grupo = "ubicacion" | "proveedores" | "proyectos-clientes";
 
 /**
  * Configuración (2026-09-09, debajo de Usuarios en el riel): así como admin/super_admin pueden
@@ -20,28 +21,39 @@ type Seccion = "ubicaciones" | "categorias-proveedor" | "servicios" | "estados-p
  * catálogos: nada de esto toca clientes/proveedores/proyectos directamente, solo las listas de
  * las que esos formularios sacan sus opciones (mismo `catalogosApi` que ya usa el resto de la app).
  *
- * Rediseño 2026-09-10 (Alicia: "mejorar ese diseño... que sea flexible y uno pueda trabajar
- * superfácil y rápido ahí, sin problema e inconveniente"). Tres cambios de estructura sobre la v1:
+ * Rediseño 2026-09-18 (Alicia, tajante: "el diseño de configuración no me gusta, no me convence...
+ * es muy mediocre... investiga sobre diseños de verdad"): investigué paneles de settings reales
+ * (Notion, Linear -- ver fuentes en el mensaje) y de ahí saqué tres cambios de fondo sobre el
+ * riel plano de la v2 (2026-09-10), que solo tenía 6 botones sueltos sin ninguna jerarquía:
  *
- * 1. Las 4 pestañas horizontales pasaron a un riel vertical de 6 secciones (categorías de
- *    proveedor y servicios ya no comparten pestaña con la nota de "estados de proveedor" -- cada
- *    catálogo es su propia sección, con su propio contador, así se ve de un vistazo cuánto hay en
- *    cada uno sin entrar). Un riel vertical también dice de entrada TODO lo que hay para
- *    administrar, en vez de esconder 3 de 4 detrás de un clic (una pestaña activa no insinúa que
- *    existan las otras tres tanto como una lista completa siempre visible).
- * 2. Cada lista (`CatalogList`) ahora agrega arriba y busca cuando hay muchos ítems -- ver ese
- *    archivo.
- * 3. Ubicaciones pasó de apilar país->región->ciudad verticalmente (cada clic empujaba todo hacia
- *    abajo) a un panel de dos columnas que no crece -- ver `UbicacionesSection`.
+ * 1. Riel agrupado por tema (Ubicación / Proveedores / Proyectos y clientes), con un rótulo de
+ *    grupo -- así como Notion separa "Cuenta" de "Espacio de trabajo" -- en vez de 6 ítems sueltos
+ *    que no dicen nada sobre cómo se relacionan entre sí.
+ * 2. Cada grupo tiene su propio color de acento (de la paleta que YA existe en la app -- azul,
+ *    ámbar, verde -- nada inventado) que se repite en el ícono de cada catálogo de ese grupo, en
+ *    el estado activo del riel y en el encabezado de la derecha -- así un vistazo rápido ya dice
+ *    "esto es de Proveedores" antes de leer una sola palabra, como el acento de color por sección
+ *    de Linear.
+ * 3. El estado activo del riel dejó de ser un bloque negro sólido (que no decía nada del tema) --
+ *    ahora es un tinte suave del color del grupo + una barra de acento a la izquierda, que es como
+ *    Linear marca el ítem activo (fondo más claro, no un bloque opaco).
  */
-const SECCIONES: { id: Seccion; label: string; icon: typeof MapPin; descripcion: string }[] = [
-  { id: "ubicaciones", label: "Ubicaciones", icon: MapPin, descripcion: "Países, regiones y ciudades -- alimentan los selectores de ubicación de Clientes y Proveedores." },
-  { id: "categorias-proveedor", label: "Categorías de proveedor", icon: Tags, descripcion: "Aparecen en el desplegable \u201cCategoría\u201d del formulario de Proveedor." },
-  { id: "servicios", label: "Servicios", icon: Wrench, descripcion: "El catálogo de servicios que puede ofrecer un proveedor." },
-  { id: "estados-proveedor", label: "Estados de proveedor", icon: Truck, descripcion: "Aparecen en el desplegable \u201cEstado\u201d del formulario de Proveedor." },
-  { id: "estados-proyecto", label: "Fases y estados de proyecto", icon: CalendarCheck2, descripcion: "El recorrido completo de un proyecto, agrupado en fases -- alimenta \u201cEstado del proyecto\u201d." },
-  { id: "etapas-cliente", label: "Etapas de proceso comercial", icon: Building2, descripcion: "Las etapas previas a que exista un brief -- distintas del estado del cliente (Activo/Prospecto/Inactivo)." },
+const GRUPOS: Record<Grupo, { label: string; color: string; light: string }> = {
+  ubicacion: { label: "Ubicación", color: "var(--blue)", light: "var(--blue-light)" },
+  proveedores: { label: "Proveedores", color: "var(--amber)", light: "var(--amber-light)" },
+  "proyectos-clientes": { label: "Proyectos y clientes", color: "var(--success)", light: "var(--success-light)" },
+};
+
+const SECCIONES: { id: Seccion; grupo: Grupo; label: string; icon: typeof MapPin; descripcion: string }[] = [
+  { id: "ubicaciones", grupo: "ubicacion", label: "Ubicaciones", icon: MapPin, descripcion: "Países, regiones y ciudades -- alimentan los selectores de ubicación de Clientes y Proveedores." },
+  { id: "categorias-proveedor", grupo: "proveedores", label: "Categorías de proveedor", icon: Tags, descripcion: "Aparecen en el desplegable “Categoría” del formulario de Proveedor." },
+  { id: "servicios", grupo: "proveedores", label: "Servicios", icon: Wrench, descripcion: "El catálogo de servicios que puede ofrecer un proveedor." },
+  { id: "estados-proveedor", grupo: "proveedores", label: "Estados de proveedor", icon: Truck, descripcion: "Aparecen en el desplegable “Estado” del formulario de Proveedor." },
+  { id: "estados-proyecto", grupo: "proyectos-clientes", label: "Fases y estados de proyecto", icon: CalendarCheck2, descripcion: "El recorrido completo de un proyecto, agrupado en fases -- alimenta “Estado del proyecto”." },
+  { id: "etapas-cliente", grupo: "proyectos-clientes", label: "Etapas de proceso comercial", icon: Building2, descripcion: "Las etapas previas a que exista un brief -- distintas del estado del cliente (Activo/Prospecto/Inactivo)." },
 ];
+
+const GRUPOS_ORDEN: Grupo[] = ["ubicacion", "proveedores", "proyectos-clientes"];
 
 export default function ConfiguracionPage() {
   const user = useAuthStore((s) => s.user);
@@ -85,6 +97,9 @@ export default function ConfiguracionPage() {
     "estados-proyecto": estadosProyecto.length,
     "etapas-cliente": etapasCliente.length,
   };
+  const activa = SECCIONES.find((s) => s.id === seccion)!;
+  const grupoActivo = GRUPOS[activa.grupo];
+
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -96,47 +111,69 @@ export default function ConfiguracionPage() {
       </div>
 
       <div className="flex flex-col gap-5 min-[1001px]:flex-row min-[1001px]:items-start">
-        <nav className="flex flex-shrink-0 flex-row flex-wrap gap-1 rounded-[var(--radius-lg)] border border-border bg-surface p-1.5 shadow-[0_1px_3px_rgba(12,12,12,.04)] min-[1001px]:w-[272px] min-[1001px]:flex-col min-[1001px]:flex-nowrap">
-          {SECCIONES.map((s) => {
-            const activa = seccion === s.id;
-            const conteo = conteos[s.id];
+        <nav className="flex flex-shrink-0 flex-col gap-3 rounded-[var(--radius-lg)] border border-border bg-surface p-2.5 shadow-[0_1px_3px_rgba(12,12,12,.04)] min-[1001px]:w-[280px]">
+          {GRUPOS_ORDEN.map((g) => {
+            const grupo = GRUPOS[g];
+            const items = SECCIONES.filter((s) => s.grupo === g);
             return (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setSeccion(s.id)}
-                className={`flex cursor-pointer items-start gap-2 rounded-[var(--radius-md)] px-3 py-2 text-left text-[13px] font-medium transition-colors ${
-                  activa ? "bg-text text-white" : "text-text-2 hover:bg-bg"
-                }`}
-              >
-                <s.icon size={14} strokeWidth={1.8} className="mt-0.5 flex-shrink-0" />
-                <span className="min-w-0 flex-1 leading-snug">{s.label}</span>
-                {conteo !== undefined && (
-                  <span className={`flex-shrink-0 font-mono text-[11px] ${activa ? "text-white/70" : "text-text-3"}`}>{conteo}</span>
-                )}
-              </button>
+              <div key={g} className="flex flex-col gap-0.5">
+                <div className="px-2 pb-1 pt-1 font-mono text-[10px] font-semibold uppercase tracking-widest text-text-3">{grupo.label}</div>
+                {items.map((s) => {
+                  const isActive = seccion === s.id;
+                  const conteo = conteos[s.id];
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setSeccion(s.id)}
+                      style={isActive ? { background: grupo.light, borderLeftColor: grupo.color } : undefined}
+                      className={`flex cursor-pointer items-center gap-2.5 rounded-[var(--radius-md)] border-l-[3px] border-l-transparent py-2 pl-2.5 pr-2 text-left text-[13px] font-medium transition-colors ${
+                        isActive ? "" : "text-text-2 hover:bg-bg"
+                      }`}
+                    >
+                      <span
+                        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] transition-colors"
+                        style={isActive ? { background: grupo.color, color: "#fff" } : { background: grupo.light, color: grupo.color }}
+                      >
+                        <s.icon size={14} strokeWidth={1.8} />
+                      </span>
+                      <span className={`min-w-0 flex-1 leading-snug ${isActive ? "font-semibold text-text" : ""}`}>{s.label}</span>
+                      {conteo !== undefined && (
+                        <span
+                          className="flex-shrink-0 rounded-full px-1.5 py-[1px] font-mono text-[10.5px]"
+                          style={isActive ? { background: "rgba(255,255,255,.6)", color: grupo.color } : { background: "var(--gray-light)", color: "var(--text-3)" }}
+                        >
+                          {conteo}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             );
           })}
         </nav>
 
         <div className="min-w-0 flex-1">
-          {/* Encabezado de sección (2026-09-18, Alicia: "que mires bien todos los diseños... que
-              todo quede súper chévere"): antes el panel de la derecha caía directo en la lista, sin
-              decir para qué sirve ese catálogo -- ahora repite el nombre y explica en una línea
-              dónde se usa, como cualquier guía de settings recomienda ("group by task, one-line
-              helper text"), así uno no tiene que adivinarlo mirando el riel de la izquierda. */}
-          {(() => {
-            const activa = SECCIONES.find((s) => s.id === seccion)!;
-            return (
-              <div className="mb-3.5">
-                <div className="flex items-center gap-2 text-[15px] font-semibold">
-                  <activa.icon size={15} strokeWidth={1.8} className="text-text-3" />
-                  {activa.label}
-                </div>
-                <p className="mt-1 text-[12.5px] text-text-3">{activa.descripcion}</p>
-              </div>
-            );
-          })()}
+          {/* Encabezado de sección: ícono grande con el color del grupo, título y para qué sirve
+              este catálogo -- antes el panel de la derecha caía directo en la lista sin ningún
+              contexto. Una franja superior del color del grupo conecta visualmente este encabezado
+              con el ítem activo del riel de la izquierda. */}
+          <div
+            className="mb-3.5 flex items-start gap-3 rounded-[var(--radius-lg)] border border-border bg-surface p-4 shadow-[0_1px_3px_rgba(12,12,12,.04)]"
+            style={{ borderTop: `3px solid ${grupoActivo.color}` }}
+          >
+            <span
+              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)]"
+              style={{ background: grupoActivo.light, color: grupoActivo.color }}
+            >
+              <activa.icon size={18} strokeWidth={1.8} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[15px] font-semibold">{activa.label}</div>
+              <p className="mt-0.5 text-[12.5px] text-text-3">{activa.descripcion}</p>
+            </div>
+          </div>
 
           {seccion === "ubicaciones" && <UbicacionesSection />}
 
