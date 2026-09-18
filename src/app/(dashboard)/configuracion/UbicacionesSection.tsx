@@ -36,7 +36,6 @@ export function UbicacionesSection() {
   const [busquedaPais, setBusquedaPais] = useState("");
 
   const [nuevoPaisNombre, setNuevoPaisNombre] = useState("");
-  const [nuevoPaisEtiqueta, setNuevoPaisEtiqueta] = useState("");
   const [addingPais, setAddingPais] = useState(false);
   const [editandoPais, setEditandoPais] = useState<Pais | null>(null);
   const [editNombre, setEditNombre] = useState("");
@@ -86,13 +85,16 @@ export function UbicacionesSection() {
     setRegionId("");
   }
 
+  // Alicia (2026-09-18): "solo deberíamos poder añadir el país y no deber colocar el
+  // departamento" -- al crear un país solo se pide el nombre; la etiqueta de su segundo nivel
+  // (Departamento/Estado/Región) arranca en "Región" y se ajusta luego editando el país (lápiz),
+  // ya con el país creado y sus departamentos empezando a agregarse.
   async function handleAddPais() {
-    if (!nuevoPaisNombre.trim() || !nuevoPaisEtiqueta.trim()) return;
+    if (!nuevoPaisNombre.trim()) return;
     setAddingPais(true);
     try {
-      const creado = await addPais({ nombre: nuevoPaisNombre.trim(), etiquetaRegion: nuevoPaisEtiqueta.trim() });
+      const creado = await addPais({ nombre: nuevoPaisNombre.trim(), etiquetaRegion: "Región" });
       setNuevoPaisNombre("");
-      setNuevoPaisEtiqueta("");
       elegirPais(creado.id);
       pushToast("País agregado", "success");
     } catch (err) {
@@ -143,17 +145,9 @@ export function UbicacionesSection() {
                 onChange={(e) => setNuevoPaisNombre(e.target.value)}
                 placeholder="Nuevo país…"
                 className="h-9 min-w-0 flex-1 bg-surface"
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddPais(); } }}
               />
-              <div className="w-[140px] flex-shrink-0">
-                <Input
-                  value={nuevoPaisEtiqueta}
-                  onChange={(e) => setNuevoPaisEtiqueta(e.target.value)}
-                  placeholder="Ej. Departamento"
-                  className="h-9 bg-surface"
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddPais(); } }}
-                />
-              </div>
-              <RowAction label="Agregar país" onClick={handleAddPais} disabled={addingPais || !nuevoPaisNombre.trim() || !nuevoPaisEtiqueta.trim()}>
+              <RowAction label="Agregar país" onClick={handleAddPais} disabled={addingPais || !nuevoPaisNombre.trim()}>
                 <Plus size={14} strokeWidth={2} />
               </RowAction>
             </div>
@@ -213,10 +207,7 @@ export function UbicacionesSection() {
           hacia abajo con cada clic, solo cambia de contenido (2026-09-10). */}
       <div className="min-w-0 flex-1">
         {!paisId && (
-          <div className="flex flex-col items-center justify-center gap-2 rounded-[var(--radius-lg)] border border-dashed border-border px-4 py-16 text-center">
-            <MapPin size={22} strokeWidth={1.5} className="text-text-3" />
-            <div className="text-[13px] text-text-2">Agrega un país a la izquierda para empezar a cargar sus regiones y ciudades.</div>
-          </div>
+          <div className="px-1 py-6 text-[13px] text-text-3">Agrega un país a la izquierda para empezar a cargar sus regiones y ciudades.</div>
         )}
 
         {paisId && !regionId && (
