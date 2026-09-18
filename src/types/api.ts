@@ -410,7 +410,7 @@ export interface EtapaClienteInput {
 }
 
 /** Los `tipo` válidos para DELETE /api/catalogos/{tipo}/{id} -- ver CatalogosService en el backend. */
-export type CatalogoTipo = "paises" | "regiones" | "ciudades" | "categorias-proveedor" | "servicios" | "estados-proyecto" | "etapas-cliente";
+export type CatalogoTipo = "paises" | "regiones" | "ciudades" | "categorias-proveedor" | "servicios" | "estados-proveedor" | "estados-proyecto" | "etapas-cliente";
 
 // ---------------------------------------------------------------------------
 // Solicitudes de eliminación

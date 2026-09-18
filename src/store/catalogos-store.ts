@@ -30,6 +30,7 @@ interface CatalogosState {
   paises: Pais[];
   categoriasProveedor: ItemCatalogo[];
   servicios: ItemCatalogo[];
+  estadosProveedor: ItemCatalogo[];
   estadosProyecto: EstadoProyecto[];
   fasesProyecto: FaseProyecto[];
   etapasCliente: EtapaCliente[];
@@ -63,6 +64,8 @@ interface CatalogosState {
   addCategoria: (nombre: string) => Promise<ItemCatalogo>;
   updateCategoria: (id: string, nombre: string) => Promise<ItemCatalogo>;
   updateServicio: (id: string, nombre: string) => Promise<ItemCatalogo>;
+  addEstadoProveedor: (nombre: string) => Promise<ItemCatalogo>;
+  updateEstadoProveedor: (id: string, nombre: string) => Promise<ItemCatalogo>;
   updateFase: (fase: number, nombre: string) => Promise<FaseProyecto>;
   addEstadoProyecto: (input: EstadoProyectoInput) => Promise<EstadoProyecto>;
   updateEstadoProyecto: (id: string, input: EstadoProyectoInput) => Promise<EstadoProyecto>;
@@ -76,6 +79,7 @@ export const useCatalogosStore = create<CatalogosState>((set, get) => ({
   paises: [],
   categoriasProveedor: [],
   servicios: [],
+  estadosProveedor: [],
   estadosProyecto: [],
   fasesProyecto: [],
   etapasCliente: [],
@@ -88,15 +92,16 @@ export const useCatalogosStore = create<CatalogosState>((set, get) => ({
     if (get().loaded || get().loading) return;
     set({ loading: true, error: null });
     try {
-      const [paises, categoriasProveedor, servicios, estadosProyecto, fasesProyecto, etapasCliente] = await Promise.all([
+      const [paises, categoriasProveedor, servicios, estadosProveedor, estadosProyecto, fasesProyecto, etapasCliente] = await Promise.all([
         catalogosApi.paises.list(),
         catalogosApi.categoriasProveedor.list(),
         catalogosApi.servicios.list(),
+        catalogosApi.estadosProveedor.list(),
         catalogosApi.estadosProyecto.list(),
         catalogosApi.fasesProyecto.list(),
         catalogosApi.etapasCliente.list(),
       ]);
-      set({ paises, categoriasProveedor, servicios, estadosProyecto, fasesProyecto, etapasCliente, loading: false, loaded: true });
+      set({ paises, categoriasProveedor, servicios, estadosProveedor, estadosProyecto, fasesProyecto, etapasCliente, loading: false, loaded: true });
     } catch (err) {
       set({ loading: false, error: err instanceof Error ? err.message : "No se pudieron cargar los catálogos." });
     }
@@ -180,6 +185,16 @@ export const useCatalogosStore = create<CatalogosState>((set, get) => ({
     set((state) => ({ servicios: state.servicios.map((s) => (s.id === id ? actualizado : s)) }));
     return actualizado;
   },
+  addEstadoProveedor: async (nombre) => {
+    const creado = await catalogosApi.estadosProveedor.create(nombre);
+    set((state) => ({ estadosProveedor: [...state.estadosProveedor, creado] }));
+    return creado;
+  },
+  updateEstadoProveedor: async (id, nombre) => {
+    const actualizado = await catalogosApi.estadosProveedor.update(id, nombre);
+    set((state) => ({ estadosProveedor: state.estadosProveedor.map((e) => (e.id === id ? actualizado : e)) }));
+    return actualizado;
+  },
   updateFase: async (fase, nombre) => {
     const actualizada = await catalogosApi.fasesProyecto.update(fase, nombre);
     set((state) => ({ fasesProyecto: state.fasesProyecto.map((f) => (f.fase === fase ? actualizada : f)) }));
@@ -225,6 +240,8 @@ export const useCatalogosStore = create<CatalogosState>((set, get) => ({
           return { categoriasProveedor: state.categoriasProveedor.filter((c) => c.id !== id) };
         case "servicios":
           return { servicios: state.servicios.filter((s) => s.id !== id) };
+        case "estados-proveedor":
+          return { estadosProveedor: state.estadosProveedor.filter((e) => e.id !== id) };
         case "estados-proyecto":
           return { estadosProyecto: state.estadosProyecto.filter((e) => e.id !== id) };
         case "etapas-cliente":

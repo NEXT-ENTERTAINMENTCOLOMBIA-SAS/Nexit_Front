@@ -20,15 +20,18 @@ import {
 import { DeleteOrRequestButton } from "@/components/ui/DeleteAction";
 import { Spinner } from "@/components/ui/Spinner";
 import { RowAction, Table, Td, Th, Thead, Tr } from "@/components/ui/Table";
-import { PROVEEDOR_ESTADOS, PROVIDER_STATUS_COLORS, statusColor } from "@/lib/constants";
+import { PROVIDER_STATUS_COLORS, statusColor } from "@/lib/constants";
 import { useAuthStore } from "@/store/auth-store";
 import { useCatalogosStore } from "@/store/catalogos-store";
 import { usePageToolbarStore } from "@/store/page-toolbar-store";
 import { useProvidersStore } from "@/store/providers-store";
 import { readFilterState, writeFilterState } from "@/lib/use-filter-state";
+import type { SearchSuggestion } from "@/store/page-toolbar-store";
 import { useGridColumns } from "@/lib/use-grid-columns";
 import { useUiStore } from "@/store/ui-store";
 import { proveedoresApi } from "@/services/api/proveedores-service";
+import { proveedorAdjuntosApi } from "@/services/api/proveedor-adjuntos-service";
+import type { PendingAttachment } from "@/components/ui/EntityAttachments";
 import type { Proveedor, ProveedorInput } from "@/types/api";
 import { ProviderCard } from "./ProviderCard";
 import { ProviderFormModal } from "./ProviderFormModal";
@@ -46,7 +49,7 @@ export default function ProveedoresPage() {
     updateProvider,
     removeProvider,
   } = useProvidersStore();
-  const { paises, categoriasProveedor, regionesPorPais, ciudadesPorRegion, fetchBase, fetchRegiones, fetchCiudades } =
+  const { paises, categoriasProveedor, estadosProveedor, regionesPorPais, ciudadesPorRegion, fetchBase, fetchRegiones, fetchCiudades } =
     useCatalogosStore();
   const pushToast = useUiStore((s) => s.pushToast);
   const authUser = useAuthStore((s) => s.user);
@@ -88,6 +91,7 @@ export default function ProveedoresPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Proveedor | null>(null);
+  const [pendingAdjuntos, setPendingAdjuntos] = useState<PendingAttachment[]>([]);
   const [detailId, setDetailId] = useState<string | null>(null);
 
   // Autoguardado de filtros (Alicia 2026-09-07): restaura lo que había
@@ -122,7 +126,7 @@ export default function ProveedoresPage() {
     // completo) se confundian con una tarjeta gigante rota. Los demas filtros
     // (busqueda, estado, etc.) SI se siguen restaurando; la vista simplemente
     // siempre arranca en "Tarjetas" para que las tres pantallas se vean iguales.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe correr una vez, al montar
+     
   }, []);
 
   useEffect(() => {
@@ -156,11 +160,33 @@ export default function ProveedoresPage() {
       addLabel: "Nuevo proveedor",
       onAdd: () => {
         setEditing(null);
+        setPendingAdjuntos([]);
         setFormOpen(true);
       },
+      // Buscador más inteligente (Alicia 2026-09-18), mismo criterio que Clientes: el nombre que
+      // empieza igual que lo escrito manda primero.
+      getSuggestions: (query) => {
+        const q = query.toLowerCase();
+        return providers
+          .map((p) => {
+            const nombre = p.nombre?.toLowerCase() ?? "";
+            const categoria = categoriasProveedor.find((cat) => cat.id === p.categoriaId)?.nombre;
+            const rank = nombre.startsWith(q) ? 0 : nombre.includes(q) ? 1 : [categoria, p.contacto].some((v) => v?.toLowerCase().includes(q)) ? 2 : -1;
+            return { p, categoria, rank };
+          })
+          .filter((x) => x.rank >= 0)
+          .sort((a, b) => a.rank - b.rank || a.p.nombre.localeCompare(b.p.nombre))
+          .slice(0, 8)
+          .map(({ p, categoria }): SearchSuggestion => ({
+            id: p.id,
+            label: p.nombre,
+            sublabel: [categoria, p.contacto].filter(Boolean).join(" · ") || undefined,
+          }));
+      },
+      onSelectSuggestion: (s) => setDetailId(s.id),
     });
     return clearToolbar;
-  }, [clearToolbar, esAdmin, refresh, setToolbar]);
+  }, [providers, categoriasProveedor, clearToolbar, esAdmin, refresh, setToolbar]);
 
   const regionOptions = useMemo(() => regionesPorPais[filtPais] ?? [], [regionesPorPais, filtPais]);
   const cityOptions = useMemo(() => ciudadesPorRegion[filtRegion] ?? [], [ciudadesPorRegion, filtRegion]);
@@ -250,6 +276,18 @@ export default function ProveedoresPage() {
         setEditing(null);
       } else {
         const creado = await addProvider(input);
+        // Sube/crea, uno por uno, los archivos y links agregados ANTES de guardar (Alicia
+        // 2026-09-10) -- antes de pasar a modo edición, para que EntityAttachments ya los
+        // encuentre ahí en su primera carga en vivo.
+        for (const p of pendingAdjuntos) {
+          try {
+            if (p.tipo === "link" && p.url) await proveedorAdjuntosApi.crearLink(creado.id, { tipo: "link", nombre: p.nombre, url: p.url });
+            else if (p.file) await proveedorAdjuntosApi.subirArchivo(creado.id, p.file);
+          } catch (err) {
+            pushToast(err instanceof Error ? err.message : `No se pudo subir "${p.nombre}"`, "danger");
+          }
+        }
+        setPendingAdjuntos([]);
         pushToast("Proveedor agregado", "success");
         setEditing(creado);
       }
@@ -362,7 +400,7 @@ export default function ProveedoresPage() {
             value={filtEstado}
             onChange={setFiltEstado}
             placeholder="Cualquier estado"
-            options={PROVEEDOR_ESTADOS.map((e) => ({ value: e, label: e }))}
+            options={estadosProveedor.map((e) => ({ value: e.nombre, label: e.nombre }))}
           />
         </div>
 
@@ -384,7 +422,15 @@ export default function ProveedoresPage() {
              mucho espacio muerto al lado cuando había pocos resultados. */}
           <div className="border-b border-border pb-3">{paginationBar}</div>
           {view === "cards" ? (
-            <div ref={cardsGridRef} className={styles.cardsGrid} style={{ gridTemplateColumns: `repeat(${cardsGridColumns}, minmax(0, 1fr))` }}>
+            <div
+              ref={cardsGridRef}
+              className={styles.cardsGrid}
+              // display/gap tambien en linea (no solo en dashboard.module.css): si el CSS de
+              // esta ruta todavia no llego cuando se pinta el primer frame despues del login,
+              // el contenedor no debe caer a bloque apilado de ancho completo mientras tanto
+              // (ver el comentario 2026-09-18 en use-grid-columns.ts).
+              style={{ display: "grid", gap: 12, gridTemplateColumns: `repeat(${cardsGridColumns}, minmax(0, 1fr))` }}
+            >
               {pageRows.map((p) => (
                 <ProviderCard
                   key={p.id}
@@ -477,10 +523,13 @@ export default function ProveedoresPage() {
         onClose={() => {
           setFormOpen(false);
           setEditing(null);
+          setPendingAdjuntos([]);
         }}
         onSave={handleSave}
         onDelete={() => editing && handleDelete(editing.id)}
         editing={editing}
+        pendingAdjuntos={pendingAdjuntos}
+        onPendingAdjuntosChange={setPendingAdjuntos}
       />
 
       <ProviderDetail

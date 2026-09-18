@@ -43,8 +43,7 @@ export function ProviderDetail({
   const pushToast = useUiStore((s) => s.pushToast);
   const user = useAuthStore((s) => s.user);
   const { marcarColaborador, quitarColaborador } = useProvidersStore();
-  const { paises, categoriasProveedor, servicios, regionesPorPais, ciudadesPorRegion, fetchBase, fetchRegiones, fetchCiudades } =
-    useCatalogosStore();
+  const { paises, categoriasProveedor, regionesPorPais, ciudadesPorRegion, fetchBase, fetchRegiones, fetchCiudades } = useCatalogosStore();
 
   const [historial, setHistorial] = useState<HistorialCambio[]>([]);
   const [historialCargando, setHistorialCargando] = useState(false);
@@ -92,9 +91,6 @@ export function ProviderDetail({
   const paisNombre = paises.find((p) => p.id === provider.paisId)?.nombre;
   const regionNombre = regionesPorPais[provider.paisId ?? ""]?.find((r) => r.id === provider.regionId)?.nombre;
   const ciudadNombre = ciudadesPorRegion[provider.regionId ?? ""]?.find((c) => c.id === provider.ciudadId)?.nombre;
-  const serviciosNombres = provider.servicioIds
-    .map((id) => servicios.find((s) => s.id === id)?.nombre)
-    .filter((n): n is string => Boolean(n));
   const yoSoyColaborador = Boolean(user && provider.colaboradores.some((c) => c.usuarioId === user.id));
 
   /** Número para WhatsApp (solo dígitos, con código de país incluido si el
@@ -290,15 +286,9 @@ export function ProviderDetail({
           </DetailBox>
         )}
 
-        {serviciosNombres.length > 0 && (
-          <DetailBox title="Servicios que presta">
-            <div className="flex flex-wrap gap-1.5">
-              {serviciosNombres.map((s) => (
-                <Tag key={s}>{s}</Tag>
-              ))}
-            </div>
-          </DetailBox>
-        )}
+        {/* Alicia 2026-09-19: "servicios que presta no son todos los servicios... quítalo" --
+            era una lista incompleta armada a mano que daba la impresión de ser el catálogo
+            completo. Para eso quedan las notas internas (ver ProviderFormModal.tsx). */}
 
         <DetailBox title={`Trabajando con este proveedor (${provider.colaboradores.length})`}>
           <div className="mb-2.5 flex flex-wrap items-center gap-1.5">

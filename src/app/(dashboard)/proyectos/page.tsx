@@ -27,8 +27,11 @@ import { useProvidersStore } from "@/store/providers-store";
 import { usePageToolbarStore } from "@/store/page-toolbar-store";
 import { useUiStore } from "@/store/ui-store";
 import { readFilterState, writeFilterState } from "@/lib/use-filter-state";
+import type { SearchSuggestion } from "@/store/page-toolbar-store";
 import { useGridColumns } from "@/lib/use-grid-columns";
 import { proyectosApi } from "@/services/api/proyectos-service";
+import { proyectoAdjuntosApi } from "@/services/api/proyecto-adjuntos-service";
+import type { PendingAttachment } from "@/components/ui/EntityAttachments";
 import type { Proyecto, ProyectoInput } from "@/types/api";
 import { ProjectCard } from "./ProjectCard";
 import { ProjectFormModal } from "./ProjectFormModal";
@@ -64,6 +67,8 @@ export default function ProyectosPage() {
   const [search, setSearch] = useState("");
   const [filtEstadoId, setFiltEstadoId] = useState("");
   const [filtClienteId, setFiltClienteId] = useState("");
+  // Filtro por tipo de proyecto (Alicia 2026-09-18): "Corporativo" o "Evento social".
+  const [filtTipo, setFiltTipo] = useState("");
   const [view, setView] = useState<"cards" | "table">("cards");
   // Columnas de la grilla de tarjetas calculadas para llenar el ancho
   // disponible sin franja vacía, con o sin el riel expandido (Alicia
@@ -73,6 +78,7 @@ export default function ProyectosPage() {
   const [perPage, setPerPage] = useState(10);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Proyecto | null>(null);
+  const [pendingAdjuntos, setPendingAdjuntos] = useState<PendingAttachment[]>([]);
   const [detailId, setDetailId] = useState<string | null>(null);
 
   // Autoguardado de filtros (Alicia 2026-09-07): restaura lo que había
@@ -84,6 +90,7 @@ export default function ProyectosPage() {
       search: string;
       filtEstadoId: string;
       filtClienteId: string;
+      filtTipo: string;
       view: "cards" | "table";
     }>("proyectos");
     if (!saved) return;
@@ -91,6 +98,7 @@ export default function ProyectosPage() {
     if (saved.search !== undefined) setSearch(saved.search);
     if (saved.filtEstadoId !== undefined) setFiltEstadoId(saved.filtEstadoId);
     if (saved.filtClienteId !== undefined) setFiltClienteId(saved.filtClienteId);
+    if (saved.filtTipo !== undefined) setFiltTipo(saved.filtTipo);
     // Alicia 2026-09-08: NO restauramos `view` (Tarjetas/Tabla) desde la sesion
     // guardada. Esto era la causa real de "me aparece una tarjeta supergrande":
     // cada pantalla (Clientes/Proveedores/Proyectos) recordaba su propia vista
@@ -100,12 +108,12 @@ export default function ProyectosPage() {
     // completo) se confundian con una tarjeta gigante rota. Los demas filtros
     // (busqueda, estado, etc.) SI se siguen restaurando; la vista simplemente
     // siempre arranca en "Tarjetas" para que las tres pantallas se vean iguales.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe correr una vez, al montar
+     
   }, []);
 
   useEffect(() => {
-    writeFilterState("proyectos", { search, filtEstadoId, filtClienteId, view });
-  }, [search, filtEstadoId, filtClienteId, view]);
+    writeFilterState("proyectos", { search, filtEstadoId, filtClienteId, filtTipo, view });
+  }, [search, filtEstadoId, filtClienteId, filtTipo, view]);
 
   useEffect(() => {
     const openId = searchParams.get("open");
@@ -135,29 +143,69 @@ export default function ProyectosPage() {
       addLabel: "Nuevo proyecto",
       onAdd: () => {
         setEditing(null);
+        setPendingAdjuntos([]);
         setFormOpen(true);
       },
+      // Buscador más inteligente (Alicia 2026-09-18): además de nombre/cliente/ejecutivo, si lo
+      // escrito es un año ("2025") también sugiere los proyectos cuya fecha de evento o de
+      // solicitud caiga en ese año -- antes esa búsqueda no encontraba nada.
+      getSuggestions: (query) => {
+        const q = query.toLowerCase();
+        const comoAño = /^\d{4}$/.test(query.trim()) ? query.trim() : null;
+        return projects
+          .map((p) => {
+            const nombre = p.nombre?.toLowerCase() ?? "";
+            const clienteNombre = clientes.find((c) => c.id === p.clienteId)?.nombre ?? "";
+            const añoCoincide = comoAño !== null && [p.fechaEvento, p.fechaSolicitud].some((f) => f?.startsWith(comoAño));
+            const rank = nombre.startsWith(q)
+              ? 0
+              : nombre.includes(q)
+                ? 1
+                : [clienteNombre, ejecutivoDe(p)].some((v) => v?.toLowerCase().includes(q)) || añoCoincide
+                  ? 2
+                  : -1;
+            return { p, clienteNombre, rank };
+          })
+          .filter((x) => x.rank >= 0)
+          .sort((a, b) => a.rank - b.rank || a.p.nombre.localeCompare(b.p.nombre))
+          .slice(0, 8)
+          .map(({ p, clienteNombre }): SearchSuggestion => ({
+            id: p.id,
+            label: p.nombre,
+            sublabel: [clienteNombre, p.fechaEvento?.slice(0, 10)].filter(Boolean).join(" · ") || undefined,
+          }));
+      },
+      onSelectSuggestion: (s) => setDetailId(s.id),
     });
     return clearToolbar;
-  }, [clearToolbar, esAdmin, refresh, setToolbar]);
+  }, [projects, clientes, clearToolbar, esAdmin, refresh, setToolbar]);
+
+  const tiposProyecto = useMemo(
+    () => [...new Set(projects.map((p) => p.tipoProyecto).filter((t): t is string => Boolean(t)))].sort(),
+    [projects],
+  );
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
+    const comoAño = /^\d{4}$/.test(search.trim()) ? search.trim() : null;
     return projects.filter((p) => {
       const clienteNombre = clientes.find((c) => c.id === p.clienteId)?.nombre ?? "";
       const matchesSearch =
-        !s || [p.nombre, clienteNombre, ejecutivoDe(p)].some((v) => v?.toLowerCase().includes(s));
+        !s ||
+        [p.nombre, clienteNombre, ejecutivoDe(p)].some((v) => v?.toLowerCase().includes(s)) ||
+        (comoAño !== null && [p.fechaEvento, p.fechaSolicitud].some((f) => f?.startsWith(comoAño)));
       const matchesEstado = !filtEstadoId || p.estadoId === filtEstadoId;
       const matchesCliente = !filtClienteId || p.clienteId === filtClienteId;
-      return matchesSearch && matchesEstado && matchesCliente;
+      const matchesTipo = !filtTipo || p.tipoProyecto === filtTipo;
+      return matchesSearch && matchesEstado && matchesCliente && matchesTipo;
     });
-  }, [projects, clientes, search, filtEstadoId, filtClienteId]);
+  }, [projects, clientes, search, filtEstadoId, filtClienteId, filtTipo]);
 
   // Vuelve a la página 1 cada vez que cambia el resultado filtrado.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset intencional al cambiar de filtro/vista, no una sincronización derivable sin efecto
     setPage(1);
-  }, [search, filtEstadoId, filtClienteId, view]);
+  }, [search, filtEstadoId, filtClienteId, filtTipo, view]);
 
   const per = perPage === 0 ? Math.max(filtered.length, 1) : perPage;
   const totalPages = Math.max(1, Math.ceil(filtered.length / per));
@@ -184,18 +232,21 @@ export default function ProyectosPage() {
     search && { key: "search", label: `“${search}”` },
     filtEstadoId && { key: "estado", label: estadosProyecto.find((e) => e.id === filtEstadoId)?.nombre ?? "" },
     filtClienteId && { key: "cliente", label: clientes.find((c) => c.id === filtClienteId)?.nombre ?? "" },
+    filtTipo && { key: "tipo", label: filtTipo },
   ].filter(Boolean) as FilterChip[];
 
   function removeChip(key: string) {
     if (key === "search") setSearch("");
     if (key === "estado") setFiltEstadoId("");
     if (key === "cliente") setFiltClienteId("");
+    if (key === "tipo") setFiltTipo("");
   }
 
   function clearAll() {
     setSearch("");
     setFiltEstadoId("");
     setFiltClienteId("");
+    setFiltTipo("");
   }
 
   async function handleSave(input: ProyectoInput) {
@@ -207,6 +258,18 @@ export default function ProyectosPage() {
         setEditing(null);
       } else {
         const creado = await addProject(input);
+        // Sube/crea, uno por uno, los archivos y links agregados ANTES de guardar (Alicia
+        // 2026-09-10) -- antes de pasar a modo edición, para que EntityAttachments ya los
+        // encuentre ahí en su primera carga en vivo.
+        for (const p of pendingAdjuntos) {
+          try {
+            if (p.tipo === "link" && p.url) await proyectoAdjuntosApi.crearLink(creado.id, { tipo: "link", nombre: p.nombre, url: p.url });
+            else if (p.file) await proyectoAdjuntosApi.subirArchivo(creado.id, p.file);
+          } catch (err) {
+            pushToast(err instanceof Error ? err.message : `No se pudo subir "${p.nombre}"`, "danger");
+          }
+        }
+        setPendingAdjuntos([]);
         pushToast("Proyecto agregado", "success");
         setEditing(creado);
       }
@@ -282,6 +345,12 @@ export default function ProyectosPage() {
             placeholder="Todo cliente"
             options={clientes.map((c) => ({ value: c.id, label: c.nombre }))}
           />
+          <Dropdown
+            value={filtTipo}
+            onChange={setFiltTipo}
+            placeholder="Cualquier tipo"
+            options={tiposProyecto.map((t) => ({ value: t, label: t }))}
+          />
         </div>
 
         <ActiveFilters chips={chips} onRemove={removeChip} onClearAll={clearAll} variant="panel" />
@@ -302,7 +371,15 @@ export default function ProyectosPage() {
              mucho espacio muerto al lado cuando había pocos resultados. */}
           <div className="border-b border-border pb-3">{paginationBar}</div>
           {view === "cards" ? (
-            <div ref={cardsGridRef} className={styles.cardsGrid} style={{ gridTemplateColumns: `repeat(${cardsGridColumns}, minmax(0, 1fr))` }}>
+            <div
+              ref={cardsGridRef}
+              className={styles.cardsGrid}
+              // display/gap tambien en linea (no solo en dashboard.module.css): si el CSS de
+              // esta ruta todavia no llego cuando se pinta el primer frame despues del login,
+              // el contenedor no debe caer a bloque apilado de ancho completo mientras tanto
+              // (ver el comentario 2026-09-18 en use-grid-columns.ts).
+              style={{ display: "grid", gap: 12, gridTemplateColumns: `repeat(${cardsGridColumns}, minmax(0, 1fr))` }}
+            >
               {pageRows.map((p) => (
                 <ProjectCard
                   key={p.id}
@@ -376,11 +453,14 @@ export default function ProyectosPage() {
         onClose={() => {
           setFormOpen(false);
           setEditing(null);
+          setPendingAdjuntos([]);
         }}
         onSave={handleSave}
         onDelete={() => editing && handleDelete(editing.id)}
         editing={editing}
         providers={providers}
+        pendingAdjuntos={pendingAdjuntos}
+        onPendingAdjuntosChange={setPendingAdjuntos}
       />
 
       <ProjectDetail

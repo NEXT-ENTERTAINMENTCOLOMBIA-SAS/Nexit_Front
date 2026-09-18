@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { Drawer, FormDrawerBody, FormDrawerFooter, FormDrawerHeader, FormDrawerSection } from "@/components/ui/Drawer";
 import { DeleteOrRequestButton } from "@/components/ui/DeleteAction";
-import { EntityAttachments } from "@/components/ui/EntityAttachments";
+import { EntityAttachments, type PendingAttachment } from "@/components/ui/EntityAttachments";
 import { Dropdown, type DropdownGroup } from "@/components/ui/primitives";
 import { Field, Input, Row, Textarea } from "@/components/ui/form";
 import { parseCSVFirstRow } from "@/lib/csv";
@@ -84,6 +84,8 @@ export function ProjectFormModal({
   onDelete,
   editing,
   providers,
+  pendingAdjuntos,
+  onPendingAdjuntosChange,
 }: {
   open: boolean;
   onClose: () => void;
@@ -92,6 +94,10 @@ export function ProjectFormModal({
   onDelete?: () => void;
   editing: Proyecto | null;
   providers: Proveedor[];
+  /** Archivos/links agregados ANTES de guardar (Alicia 2026-09-10) -- ver el mismo patrón en
+   * ClienteFormModal.tsx. */
+  pendingAdjuntos: PendingAttachment[];
+  onPendingAdjuntosChange: (next: PendingAttachment[]) => void;
 }) {
   const user = useAuthStore((s) => s.user);
   const pushToast = useUiStore((s) => s.pushToast);
@@ -137,7 +143,7 @@ export function ProjectFormModal({
       return;
     }
     if (equipoSeleccionado.some((u) => u.id === editing.gerenteId)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- ya está entre los miembros agregados, no hace falta el fallback
+       
       setLiderFallback(null);
       return;
     }
@@ -204,7 +210,7 @@ export function ProjectFormModal({
       setSelectedIds(new Set(draft.proveedorIds));
       pushToast("Recuperamos un borrador sin guardar de este formulario.", "info");
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting the form to match whichever proyecto was opened for editing
+       
       setForm(base);
       setSelectedIds(new Set(baseProveedorIds));
     }
@@ -424,18 +430,22 @@ export function ProjectFormModal({
             </Field>
           </Row>
 
-          <Field label="Fecha de solicitud">
-            <Input type="date" value={form.fechaSolicitud} onChange={(e) => set("fechaSolicitud", e.target.value)} />
-          </Field>
-          {/* Alicia 2026-09-09: "contacto en el cliente" no era claro -- renombrado a "Persona de
+          {/* Alicia 2026-09-18: "fecha de solicitud" y "persona de contacto" van uno al lado del
+              otro, no apilados -- mismo criterio que factura/fecha de pago más abajo. Alicia
+              2026-09-09: "contacto en el cliente" no era claro -- renombrado a "Persona de
               contacto" (mismo nombre de campo que ya usa Clientes para lo mismo). */}
-          <Field label="Persona de contacto">
-            <Input
-              value={form.contactoProyecto}
-              onChange={(e) => set("contactoProyecto", e.target.value)}
-              placeholder="Nombre y apellido"
-            />
-          </Field>
+          <Row cols={2}>
+            <Field label="Fecha de solicitud">
+              <Input type="date" value={form.fechaSolicitud} onChange={(e) => set("fechaSolicitud", e.target.value)} />
+            </Field>
+            <Field label="Persona de contacto">
+              <Input
+                value={form.contactoProyecto}
+                onChange={(e) => set("contactoProyecto", e.target.value)}
+                placeholder="Nombre y apellido"
+              />
+            </Field>
+          </Row>
         </FormDrawerSection>
 
         <FormDrawerSection number="02" title="Estado">
@@ -458,24 +468,27 @@ export function ProjectFormModal({
             </Field>
           </Row>
 
-          <Field label="Estado de la propuesta">
-            <Dropdown
-              value={form.propuestaEstado}
-              onChange={(v) => set("propuestaEstado", v || PROPUESTA_ESTADOS[0])}
-              placeholder="Elige un estado"
-              options={withCurrent(PROPUESTA_ESTADOS, form.propuestaEstado).map((p) => ({ value: p, label: p }))}
-            />
-          </Field>
-
-          <label className="mb-3.5 flex h-10 w-fit cursor-pointer items-center gap-2 whitespace-nowrap text-sm font-medium text-text">
-            <input
-              type="checkbox"
-              checked={form.pagado}
-              onChange={(e) => set("pagado", e.target.checked)}
-              className="h-4 w-4 cursor-pointer accent-teal-mid"
-            />
-            Pagado
-          </label>
+          {/* Alicia 2026-09-18: "estado de la propuesta" ocupaba una fila entera para un dropdown
+              angosto -- ahora comparte fila con "Pagado", que antes quedaba suelto abajo. */}
+          <Row cols={2}>
+            <Field label="Estado de la propuesta">
+              <Dropdown
+                value={form.propuestaEstado}
+                onChange={(v) => set("propuestaEstado", v || PROPUESTA_ESTADOS[0])}
+                placeholder="Elige un estado"
+                options={withCurrent(PROPUESTA_ESTADOS, form.propuestaEstado).map((p) => ({ value: p, label: p }))}
+              />
+            </Field>
+            <label className="flex h-10 w-fit cursor-pointer items-center gap-2 self-end whitespace-nowrap pb-2.5 text-sm font-medium text-text">
+              <input
+                type="checkbox"
+                checked={form.pagado}
+                onChange={(e) => set("pagado", e.target.checked)}
+                className="h-4 w-4 cursor-pointer accent-teal-mid"
+              />
+              Pagado
+            </label>
+          </Row>
           {/* Alicia 2026-09-09: "número de factura y fecha de pago pueden ir uno al lado del otro". */}
           <Row cols={2}>
             <Field label="N.º de factura">
@@ -540,10 +553,15 @@ export function ProjectFormModal({
           )}
         </FormDrawerSection>
 
-        <FormDrawerSection number="04" title="Proveedores y notas">
+        <FormDrawerSection number="04" title="Proveedores">
           <Field label="Proveedores trabajando en este proyecto">
             <ProviderPicker providers={providers} selectedIds={selectedIds} onToggle={toggleProvider} />
           </Field>
+        </FormDrawerSection>
+
+        {/* Alicia 2026-09-18: notas internas en su propia sección, separada de proveedores --
+            antes vivían juntas y no tenía nada que ver una con la otra. */}
+        <FormDrawerSection number="05" title="Notas internas">
           {/* Alicia 2026-09-09: "más espacio para las notas internas, es importante para todo,
               proveedor, clientes y proyectos" -- !min-h-[...] para pisar el min-h-[72px] por
               defecto del Textarea compartido (mismo patrón de !bg-surface ya usado en este archivo). */}
@@ -552,16 +570,16 @@ export function ProjectFormModal({
           </Field>
         </FormDrawerSection>
 
-        <FormDrawerSection number="05" title="Archivos y enlaces">
-          {/* Alicia 2026-09-09: "no tengo que registrar el proyecto primero para que luego me
-              salga en editar" -- igual que Clientes, `handleSave` en page.tsx ya no cierra el
-              drawer al crear: deja `editing` apuntando al proyecto recién creado, así esta
-              sección queda usable de una vez. */}
-          {editing ? (
-            <EntityAttachments entityId={editing.id} api={proyectoAdjuntosApi} />
-          ) : (
-            <p className="text-sm text-text-3">Guarda el proyecto primero para poder subir archivos o agregar enlaces.</p>
-          )}
+        <FormDrawerSection number="06" title="Archivos y enlaces">
+          {/* Alicia 2026-09-10: apenas se abre el formulario ya se puede arrastrar un archivo o
+              agregar un link, sin esperar a darle "Registrar proyecto" -- ver PendingAttachment
+              en EntityAttachments.tsx. */}
+          <EntityAttachments
+            entityId={editing?.id ?? null}
+            api={proyectoAdjuntosApi}
+            pending={pendingAdjuntos}
+            onPendingChange={onPendingAdjuntosChange}
+          />
         </FormDrawerSection>
       </FormDrawerBody>
 

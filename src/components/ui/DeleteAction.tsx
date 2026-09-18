@@ -29,7 +29,7 @@ function ConfirmDeleteDialog({
   onClose: () => void;
   onConfirm: (motivo: string) => void;
   nombre: string;
-  /** Nombre engañoso por compatibilidad -- en realidad es "puede eliminar directo" (admin/super_admin/director). */
+  /** Nombre engañoso por compatibilidad -- en realidad es "puede eliminar directo" (solo super_admin, Alicia 2026-09-18). */
   esAdmin: boolean;
   loading: boolean;
 }) {
@@ -117,14 +117,11 @@ function ConfirmDeleteDialog({
 }
 
 /**
- * Botón de eliminar de cliente/proveedor/proyecto -- construido 2026-08-28, ampliado 2026-09-09.
- * Admin/super_admin/director (manager) sí pueden eliminar directo (el backend igual lo exige --
- * política DirectorOrAbove, ver *-service.ts de cada módulo). Cuando quien elimina es un director,
- * el administrador recibe una notificación (ver EliminarClienteUseCase/EliminarProveedorUseCase/
- * EliminarProyectoUseCase en el backend). Miembro nunca puede borrar de verdad -- antes el botón
- * "Eliminar" quedaba visible para todos y simplemente fallaba con un 403 al hacer clic. Para
- * miembro, el mismo lugar dispara una solicitud real (SolicitudesEliminacionController, docs/23)
- * que un gerente (si aplica) y luego un admin revisan.
+ * Botón de eliminar de cliente/proveedor/proyecto -- construido 2026-08-28, corregido 2026-09-18.
+ * Solo super_admin elimina directo (el backend igual lo exige -- política SuperAdminOnly, ver
+ * *-service.ts de cada módulo). Cualquier otro rol -- admin y manager incluidos -- nunca borra de
+ * verdad desde acá: dispara una solicitud real (SolicitudesEliminacionController, docs/23) con
+ * motivo obligatorio, que un gerente (si aplica) y luego un admin o el super_admin revisan.
  *
  * `compact` cambia el trigger de un botón con texto a un ícono cuadrado de
  * 30x30 (mismo `RowAction` que "editar" en las tablas) -- usado en la fila de
@@ -149,7 +146,7 @@ export function DeleteOrRequestButton({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [yaSolicitado, setYaSolicitado] = useState(false);
-  const esAdmin = user?.rol === "admin" || user?.rol === "super_admin" || user?.rol === "manager";
+  const esAdmin = user?.rol === "super_admin";
 
   async function handleConfirm(motivo: string) {
     if (esAdmin) {

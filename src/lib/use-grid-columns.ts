@@ -38,6 +38,27 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 // useLayoutEffect en SSR.)
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
+// Alicia 2026-09-18 (Clientes/Proveedores/Proyectos, "se ven en un rectángulon feo al
+// entrar por primera vez"): el `useLayoutEffect` de arriba ya evita el parpadeo de UNA
+// tarjeta gigante en la mayoría de los casos, pero no cubre uno: si la primerísima
+// medición (`el.clientWidth`, justo al montar el contenedor, recién llegando del login)
+// da 0 -- el contenedor real ya tiene ancho, pero el navegador todavía no terminó de
+// asentar el layout de todo lo que está montando a la vez alrededor (rail, KPIs, fuente
+// web cargando) -- `compute()` se salía sin llamar `setColumns`, así que `columns` se
+// quedaba pegado en su valor inicial (1) para siempre: sin una llamada a `setColumns` no
+// hay un nuevo render que dispare este efecto otra vez, y `ResizeObserver` únicamente
+// avisa de cambios FUTUROS de tamaño, no corrige una lectura inicial ya equivocada si el
+// contenedor no vuelve a cambiar de ancho después. Por eso se arreglaba solo con volver a
+// entrar a la página (un montaje nuevo, con todo ya asentado, medía bien la primera vez).
+// Ahora, si esa primera lectura da 0, se reintenta en el siguiente frame
+// (`requestAnimationFrame`) en vez de darse por vencido -- normalmente alcanza con un
+// reintento porque para ese momento el layout ya está asentado.
+function computeColumns(width: number, min: number, max: number, gap: number): number {
+  const byMax = Math.ceil((width + gap) / (max + gap));
+  const byMin = Math.floor((width + gap) / (min + gap));
+  return Math.max(1, Math.min(byMax, byMin || 1));
+}
+
 export function useGridColumns(min = 240, max = 300, gap = 12) {
   const ref = useRef<HTMLDivElement>(null);
   const [columns, setColumns] = useState(1);
@@ -46,19 +67,32 @@ export function useGridColumns(min = 240, max = 300, gap = 12) {
     const el = ref.current;
     if (!el) return;
 
-    function compute(width: number) {
-      if (width <= 0) return;
-      const byMax = Math.ceil((width + gap) / (max + gap));
-      const byMin = Math.floor((width + gap) / (min + gap));
-      setColumns(Math.max(1, Math.min(byMax, byMin || 1)));
+    let cancelled = false;
+    let retryFrame = 0;
+
+    function measure(width: number, attemptsLeft: number) {
+      if (cancelled) return;
+      if (width > 0) {
+        setColumns(computeColumns(width, min, max, gap));
+        return;
+      }
+      // Ancho todavía en 0 -- el contenedor existe pero el navegador no asentó su layout
+      // real todavía (típico justo después de entrar desde /login). Se reintenta un par de
+      // frames en vez de quedarse pegado en la columna única de siempre.
+      if (attemptsLeft <= 0 || !el) return;
+      retryFrame = requestAnimationFrame(() => measure(el.clientWidth, attemptsLeft - 1));
     }
 
-    compute(el.clientWidth);
+    measure(el.clientWidth, 5);
     const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) compute(entry.contentRect.width);
+      for (const entry of entries) measure(entry.contentRect.width, 5);
     });
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      cancelled = true;
+      if (retryFrame) cancelAnimationFrame(retryFrame);
+      observer.disconnect();
+    };
   }, [min, max, gap]);
 
   return { ref, columns };

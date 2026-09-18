@@ -46,6 +46,12 @@ export const catalogosApi = {
     create: (nombre: string) => apiClient.post<ItemCatalogo>("/api/catalogos/servicios", { nombre }),
     update: (id: string, nombre: string) => apiClient.put<ItemCatalogo>(`/api/catalogos/servicios/${id}`, { nombre }),
   },
+  /** "Estados de gestión de proveedores" (Activo/En evaluación/Pausado/Bloqueado, editables desde 2026-09-10). */
+  estadosProveedor: {
+    list: () => apiClient.get<ItemCatalogo[]>("/api/catalogos/estados-proveedor"),
+    create: (nombre: string) => apiClient.post<ItemCatalogo>("/api/catalogos/estados-proveedor", { nombre }),
+    update: (id: string, nombre: string) => apiClient.put<ItemCatalogo>(`/api/catalogos/estados-proveedor/${id}`, { nombre }),
+  },
   fasesProyecto: {
     list: () => apiClient.get<FaseProyecto[]>("/api/catalogos/fases-proyecto"),
     update: (fase: number, nombre: string) => apiClient.put<FaseProyecto>(`/api/catalogos/fases-proyecto/${fase}`, { nombre }),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { BarChart3, Bookmark, Download } from "lucide-react";
+import { BarChart3, Bookmark, Building2, Download, FileWarning, Folders, Truck } from "lucide-react";
 import { Button, StatCard, TabButton, TabsShell } from "@/components/ui/primitives";
 import { Spinner } from "@/components/ui/Spinner";
 import { Input } from "@/components/ui/form";
@@ -229,45 +229,53 @@ export default function InformePage() {
       ) : (
         <div className="flex flex-col gap-5">
           <div className={styles.kpis}>
-            <StatCard n={current.totalProveedores} label="Proveedores" />
-            <StatCard n={current.totalClientes} label="Clientes" />
-            <StatCard n={current.totalProyectos} label="Proyectos" />
-            <StatCard n={current.proyectosSinProveedor} label="Sin proveedor" accent={current.proyectosSinProveedor > 0 ? "#8A2525" : undefined} />
+            <StatCard n={current.totalProveedores} label="Proveedores" icon={Truck} />
+            <StatCard n={current.totalClientes} label="Clientes" icon={Building2} />
+            <StatCard n={current.totalProyectos} label="Proyectos" icon={Folders} />
+            <StatCard
+              n={current.proyectosSinProveedor}
+              label="Sin proveedor"
+              icon={FileWarning}
+              accent={current.proyectosSinProveedor > 0 ? "#8A2525" : undefined}
+            />
           </div>
 
           <div className="grid grid-cols-1 gap-3.5 min-[1001px]:grid-cols-[1.1fr_1fr_1fr]">
-            <div className="flex flex-col items-center gap-3.5 rounded-[var(--radius-lg)] border border-border bg-surface p-4">
+            <div className="flex flex-col items-center gap-3.5 rounded-[var(--radius-lg)] border border-border bg-surface p-4.5 transition-shadow hover:shadow-[0_1px_6px_rgba(12,12,12,.05)]">
               <div className="self-start text-sm font-semibold">Distribución de proyectos por estado</div>
-              <div className="flex h-[150px] w-[150px] items-center justify-center rounded-full" style={{ background: donutGradient }}>
-                <div className="flex h-24 w-24 flex-col items-center justify-center rounded-full bg-surface">
-                  <span className="text-[22px] font-semibold leading-none">{donutTotal}</span>
+              <div className="relative flex h-[160px] w-[160px] items-center justify-center rounded-full" style={{ background: donutGradient }}>
+                <div className="flex h-[108px] w-[108px] flex-col items-center justify-center rounded-full bg-surface shadow-[inset_0_0_0_1px_rgba(12,12,12,.05)]">
+                  <span className="text-[24px] font-semibold leading-none tracking-[-0.02em]">{donutTotal}</span>
                   <span className="mt-1 font-mono text-[9.5px] uppercase tracking-[0.06em] text-text-3">proyectos</span>
                 </div>
               </div>
-              <div className="flex w-full flex-col gap-1.5">
+              <div className="flex w-full flex-col gap-1">
                 {donutSegs.map((g) => (
-                  <div key={g.label} className="flex items-center gap-2 text-xs">
+                  <div key={g.label} className="flex items-center gap-2 rounded-[var(--radius-md)] px-1.5 py-1 text-xs transition-colors hover:bg-bg">
                     <span className="h-[9px] w-[9px] flex-shrink-0 rounded-full" style={{ background: g.color }} />
-                    <span className="min-w-0 flex-1 truncate">{g.label}</span>
-                    <span className="font-semibold">{g.count}</span>
+                    <span className="min-w-0 flex-1 truncate text-text-2">{g.label}</span>
+                    <span className="flex-shrink-0 rounded-[20px] bg-gray-light px-1.5 py-[1px] font-mono text-[11px] font-semibold text-text">{g.count}</span>
                   </div>
                 ))}
                 {donutSegs.length === 0 && <span className="text-xs text-text-3">Sin proyectos todavía.</span>}
               </div>
             </div>
 
-            <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-4">
-              <div className="mb-3.5 text-sm font-semibold">Por estado del proyecto</div>
+            <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-4.5 transition-shadow hover:shadow-[0_1px_6px_rgba(12,12,12,.05)]">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="text-sm font-semibold">Por estado del proyecto</div>
+                <span className="font-mono text-[11px] text-text-3">{current.totalProyectos} total</span>
+              </div>
               {estadoRows.length === 0 && <p className="text-sm text-text-3">Sin datos todavía.</p>}
               {estadoRows.map((r) => (
-                <div key={r.label} className="mb-2.5 last:mb-0">
-                  <div className="mb-1 flex justify-between text-[12.5px]">
-                    <span>{r.label}</span>
+                <div key={r.label} className="mb-3 last:mb-0">
+                  <div className="mb-1.5 flex items-center justify-between text-[12.5px]">
+                    <span className="text-text-2">{r.label}</span>
                     <span className="font-semibold">{r.count}</span>
                   </div>
                   <div className="h-[7px] overflow-hidden rounded-[20px] bg-[#EFEDE7]">
                     <div
-                      className="h-full rounded-[20px]"
+                      className="h-full rounded-[20px] transition-[width] duration-300"
                       style={{ width: `${Math.round((r.count / estadoMax) * 100)}%`, background: r.c }}
                     />
                   </div>
@@ -275,18 +283,21 @@ export default function InformePage() {
               ))}
             </div>
 
-            <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-4">
-              <div className="mb-3.5 text-sm font-semibold">Por estado del brief</div>
+            <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-4.5 transition-shadow hover:shadow-[0_1px_6px_rgba(12,12,12,.05)]">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="text-sm font-semibold">Por estado del brief</div>
+                <span className="font-mono text-[11px] text-text-3">{briefRows.reduce((a, r) => a + r.count, 0)} total</span>
+              </div>
               {briefRows.length === 0 && <p className="text-sm text-text-3">Sin datos todavía.</p>}
               {briefRows.map((r) => (
-                <div key={r.label} className="mb-2.5 last:mb-0">
-                  <div className="mb-1 flex justify-between text-[12.5px]">
-                    <span>{r.label}</span>
+                <div key={r.label} className="mb-3 last:mb-0">
+                  <div className="mb-1.5 flex items-center justify-between text-[12.5px]">
+                    <span className="text-text-2">{r.label}</span>
                     <span className="font-semibold">{r.count}</span>
                   </div>
                   <div className="h-[7px] overflow-hidden rounded-[20px] bg-[#EFEDE7]">
                     <div
-                      className="h-full rounded-[20px]"
+                      className="h-full rounded-[20px] transition-[width] duration-300"
                       style={{ width: `${Math.round((r.count / briefMax) * 100)}%`, background: r.c }}
                     />
                   </div>
@@ -297,16 +308,25 @@ export default function InformePage() {
 
           {savedReports.length > 0 && (
             <div className="flex flex-col gap-2.5">
-              <div className="text-base font-semibold">Informes guardados</div>
+              <div className="flex items-center justify-between">
+                <div className="text-base font-semibold">Informes guardados</div>
+                <span className="font-mono text-[11px] text-text-3">{savedReports.length} {savedReports.length === 1 ? "informe" : "informes"}</span>
+              </div>
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                 {savedReports.map((r) => (
-                  <div key={r.key} className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-border bg-surface px-4 py-3.5">
+                  <div
+                    key={r.key}
+                    className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-border bg-surface px-4 py-3.5 transition-shadow hover:shadow-[0_1px_6px_rgba(12,12,12,.05)]"
+                  >
                     <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gray-light text-text-2">
                       <BarChart3 size={17} strokeWidth={1.7} />
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-semibold">{r.label}</div>
-                      <div className="mt-0.5 truncate text-[11.5px] text-text-3">{fmtFecha(r.createdAt)}</div>
+                      <div className="mt-0.5 flex items-center gap-1.5 truncate text-[11.5px] text-text-3">
+                        <span className="rounded-[20px] bg-gray-light px-1.5 py-[1px] font-mono text-[10px] uppercase tracking-wide">{r.tipo}</span>
+                        {fmtFecha(r.createdAt)}
+                      </div>
                     </div>
                     <button
                       type="button"

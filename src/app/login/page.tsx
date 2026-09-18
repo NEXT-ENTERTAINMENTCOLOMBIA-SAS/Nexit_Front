@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Intro } from "@/components/ui/Intro";
 import { useUiStore } from "@/store/ui-store";
 import { authApi } from "@/services/api";
+import { ApiError } from "@/lib/api-client";
 import { supabase } from "@/lib/supabase-client";
 import { validatePassword } from "@/lib/password-policy";
 import { esDominioPermitido, mensajeDominioNoPermitido } from "@/lib/dominios-correo";
@@ -157,8 +158,21 @@ export default function LoginPage() {
     let tieneContrasena = false;
     try {
       tieneContrasena = (await authApi.estadoCuenta(email.trim())).tieneContrasena;
-    } catch {
-      // Se degrada con gracia -- ver comentario de arriba.
+    } catch (err) {
+      // Si no se pudo confirmar porque se agoto el limite de peticiones (mucha gente de la
+      // misma oficina consultando "estado-cuenta" a la vez, ver docs/30 y appsettings.Production),
+      // NO seguimos con el camino de "primera vez": eso terminaria en la pantalla de crear
+      // contrasena y le pisaria la que ya tiene a alguien que sí la configuro antes -- justo el
+      // bug reportado 2026-09-18. Se le avisa y se la manda al enlace manual de abajo en vez de
+      // adivinar. Cualquier otra falla (backend caido, sin red) sigue degradandose con gracia al
+      // envio de codigo, como antes -- ese caso no arriesga pisarle la contrasena a nadie.
+      if (err instanceof ApiError && err.statusCode === 429) {
+        setSubmitting(false);
+        setError(
+          "Hay mucha gente entrando a la vez y no pudimos confirmar tu cuenta. Si ya tienes contraseña, usa \"¿Ya tienes contraseña?\" abajo, o espera un momento y vuelve a intentar.",
+        );
+        return;
+      }
     }
     if (tieneContrasena) {
       setSubmitting(false);

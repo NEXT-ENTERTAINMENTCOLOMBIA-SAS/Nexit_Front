@@ -16,7 +16,7 @@ import {
 import { EntityAttachments } from "@/components/ui/EntityAttachments";
 import { HistorialTimeline } from "@/components/ui/HistorialTimeline";
 import { Textarea } from "@/components/ui/form";
-import { BRIEF_STATUS_COLORS, PROJECT_STATUS_COLORS, PROVIDER_STATUS_COLORS, statusColor } from "@/lib/constants";
+import { AREA_SEGUIMIENTO_COLORS, BRIEF_STATUS_COLORS, PROJECT_STATUS_COLORS, PROVIDER_STATUS_COLORS, statusColor } from "@/lib/constants";
 import { fmtDateLong } from "@/lib/format";
 import { historialApi } from "@/services/api/historial-service";
 import { proyectoAdjuntosApi } from "@/services/api/proyecto-adjuntos-service";
@@ -167,18 +167,17 @@ export function ProjectDetail({
           )}
         </div>
 
-        <DetailBox title="Avance">
-          <div className="mb-3.5">
-            <div className="mb-[9px] flex items-center justify-between text-sm">
-              <span className="font-semibold">Avance</span>
-              <span className="font-mono text-xs text-text-3">{project.porcentajeAvance}%</span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-[20px] bg-[#EFEDE7]">
-              <div className="h-full rounded-[20px] bg-text" style={{ width: `${project.porcentajeAvance}%` }} />
-            </div>
-          </div>
-          <DetailRow k="Ciudad / sede" v={[project.ciudad, project.sedeNext].filter(Boolean).join(" · ") || "—"} />
-          <DetailRow k="Solicitud → evento" v={`${fechaSolicitudLabel} → ${fechaEventoLabel}`} />
+        {/* Alicia 2026-09-18: "quita la línea de avance, no nos interesa" -- fuera la barra de
+            porcentaje; el resto de estos datos se reparte en dos cajas más claras en vez de una
+            sola "Avance" que ya no tenía mucho que ver con lo que quedaba adentro. */}
+        <DetailBox title="Fechas y ubicación">
+          <DetailRow k="Solicitud" v={fechaSolicitudLabel} />
+          <DetailRow k="Evento" v={fechaEventoLabel} />
+          <DetailRow k="Ciudad" v={project.ciudad || "—"} />
+          <DetailRow k="Sede Next" v={project.sedeNext || "—"} />
+        </DetailBox>
+
+        <DetailBox title="Propuesta y facturación">
           <DetailRow k="Propuesta" v={project.propuestaEstado || "—"} />
           <DetailRow k="Factura" v={facturaLabel} />
           {project.fechaPago && <DetailRow k="Fecha de pago" v={fmtDateLong(project.fechaPago.slice(0, 10))} />}
@@ -326,16 +325,25 @@ function Bitacora({ proyectoId }: { proyectoId: string }) {
       ) : entradas.length === 0 ? (
         <div className="py-1 text-sm text-text-3">Todavía no hay notas de seguimiento.</div>
       ) : (
+        // Alicia 2026-09-18: "hazla más útil... y más bonita" -- cada entrada en su propia
+        // tarjetita con el área como badge de color (en vez de texto plano), así se distingue de
+        // un vistazo sin tener que leer cada una; la más reciente primero (ya viene así del
+        // backend, ver ConsultarSeguimientoProyectoUseCase).
         <div className="flex flex-col gap-2">
-          {entradas.map((e) => (
-            <div key={e.id} className="border-l-2 border-border pl-3 text-[13px]">
-              <div className="flex flex-wrap items-baseline gap-2 font-mono text-[11px] text-text-3">
-                <span className="font-semibold text-text">{e.area}</span>
-                <span className="ml-auto">{fmtDateLong(e.fecha?.slice(0, 10))}</span>
+          {entradas.map((e) => {
+            const ac = statusColor(AREA_SEGUIMIENTO_COLORS, e.area);
+            return (
+              <div key={e.id} className="rounded-[var(--radius-md)] border border-[#EFEDE7] bg-bg px-3 py-2.5 text-[13px]">
+                <div className="mb-1 flex flex-wrap items-center gap-2">
+                  <Badge bg={ac.bg} color={ac.c}>
+                    {e.area}
+                  </Badge>
+                  <span className="ml-auto font-mono text-[10.5px] text-text-3">{fmtDateLong(e.fecha?.slice(0, 10))}</span>
+                </div>
+                <div className="leading-relaxed text-text-2">{e.nota}</div>
               </div>
-              <div className="leading-relaxed">{e.nota}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

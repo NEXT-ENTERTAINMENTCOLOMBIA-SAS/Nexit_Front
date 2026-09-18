@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, LogOut, Network, Plus, Search } from "lucide-react";
 import { presenciaApi } from "@/services/api/presencia-service";
 import { useAuthStore } from "@/store/auth-store";
-import { usePageToolbarStore } from "@/store/page-toolbar-store";
+import { usePageToolbarStore, type SearchSuggestion } from "@/store/page-toolbar-store";
 import { NAV } from "@/lib/nav-items";
 import { rememberSection } from "@/lib/last-section";
 import { Button } from "@/components/ui/primitives";
@@ -28,7 +28,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [menuOpen, setMenuOpen] = useState(false);
   const [railExpanded, setRailExpanded] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
+  // Desplegable de sugerencias del buscador global (Alicia 2026-09-18): cada página aporta su
+  // propia lógica de "qué es una sugerencia" vía toolbar.getSuggestions (ver page-toolbar-store.ts).
+  const [suggestOpen, setSuggestOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   /**
    * Guard de sesión Y de registro. Tener sesión en Supabase Auth no alcanza para usar Nexit:
@@ -94,11 +98,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (!menuOpen) return;
     function onClick(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSuggestOpen(false);
     }
     // Mismo criterio que el resto de overlays (Drawer, Modal, DeleteAction,
     // la hoja "Más" de móvil): Escape también cierra, no solo el click afuera.
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenuOpen(false);
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        setSuggestOpen(false);
+      }
     }
     document.addEventListener("mousedown", onClick);
     window.addEventListener("keydown", onKey);
@@ -114,8 +122,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   function handleGlobalSearch(value: string) {
     setGlobalSearch(value);
+    setSuggestOpen(value.trim().length > 0);
     window.dispatchEvent(new CustomEvent("nexit:search", { detail: value }));
   }
+
+  function handleSelectSuggestion(s: SearchSuggestion) {
+    setSuggestOpen(false);
+    toolbar?.onSelectSuggestion?.(s);
+  }
+
+  const suggestions = useMemo(
+    () => (toolbar?.getSuggestions && globalSearch.trim() ? toolbar.getSuggestions(globalSearch.trim()) : []),
+    [toolbar, globalSearch],
+  );
 
   return (
     <div className={clsx(styles.shell, railExpanded && styles.expanded)}>
@@ -254,16 +273,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       <header className={styles.desktopTopbar}>
-        <label className={styles.desktopSearch}>
-          <span className="sr-only">Buscar en la vista actual</span>
-          <Search size={16} strokeWidth={1.8} />
-          <input
-            type="search"
-            value={globalSearch}
-            onChange={(event) => handleGlobalSearch(event.target.value)}
-            placeholder={toolbar?.searchPlaceholder ?? "Buscar cliente, contacto o ciudad…"}
-          />
-        </label>
+        <div className={styles.desktopSearch} ref={searchRef}>
+          <label>
+            <span className="sr-only">Buscar en la vista actual</span>
+            <Search size={16} strokeWidth={1.8} />
+            <input
+              type="search"
+              value={globalSearch}
+              onChange={(event) => handleGlobalSearch(event.target.value)}
+              onFocus={() => setSuggestOpen(globalSearch.trim().length > 0)}
+              placeholder={toolbar?.searchPlaceholder ?? "Buscar cliente, contacto o ciudad…"}
+              role="combobox"
+              aria-expanded={suggestOpen && suggestions.length > 0}
+              aria-autocomplete="list"
+            />
+          </label>
+          {suggestOpen && suggestions.length > 0 && (
+            <div
+              role="listbox"
+              className="absolute left-0 right-0 top-[calc(100%+6px)] z-40 overflow-hidden rounded-[var(--radius-lg)] border border-text bg-surface shadow-[0_16px_44px_rgba(12,12,12,0.18)]"
+            >
+              {suggestions.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  role="option"
+                  onClick={() => handleSelectSuggestion(s)}
+                  className="flex w-full flex-col gap-0.5 border-b border-[#EFEDE7] px-3.5 py-2.5 text-left transition-colors last:border-b-0 hover:bg-[#F4F3EF]"
+                >
+                  <span className="text-[13px] font-medium text-text">{s.label}</span>
+                  {s.sublabel && <span className="text-[11.5px] text-text-2">{s.sublabel}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="ml-auto flex flex-shrink-0 items-center gap-2.5">
           <NotificationsBell />
           {toolbar && (

@@ -41,7 +41,7 @@ export function ClienteDetail({
   onEdit: () => void;
 }) {
   const pushToast = useUiStore((s) => s.pushToast);
-  const { paises, etapasCliente, regionesPorPais, ciudadesPorRegion, fetchBase, fetchRegiones, fetchCiudades } = useCatalogosStore();
+  const { paises, regionesPorPais, ciudadesPorRegion, fetchBase, fetchRegiones, fetchCiudades } = useCatalogosStore();
   const [historial, setHistorial] = useState<HistorialCambio[]>([]);
   const [historialCargando, setHistorialCargando] = useState(false);
   // Alicia 2026-09-08: "que lo pueda agrandar un poquito" -- el panel de
@@ -97,7 +97,6 @@ export function ClienteDetail({
   const primerEmail = cliente.emails[0]?.email;
   const correoHref = primerEmail ? `mailto:${primerEmail}` : null;
   const sc = statusColor(CLIENT_STATUS_COLORS, cliente.estado);
-  const etapa = etapasCliente.find((e) => e.id === cliente.etapaId);
   const paisNombre = paises.find((p) => p.id === cliente.paisId)?.nombre;
   const regionNombre = regionesPorPais[cliente.paisId ?? ""]?.find((r) => r.id === cliente.regionId)?.nombre;
   const ciudadNombre = ciudadesPorRegion[cliente.regionId ?? ""]?.find((c) => c.id === cliente.ciudadId)?.nombre ?? cliente.ciudad;
@@ -124,11 +123,6 @@ export function ClienteDetail({
           <Badge bg={sc.bg} color={sc.c}>
             {cliente.estado}
           </Badge>
-          {etapa && (
-            <Badge bg="var(--gray-light)" color="var(--text-2)">
-              {etapa.nombre} · {etapa.porcentajeProceso}%
-            </Badge>
-          )}
           <Badge bg="#F1EFE8" color="#0C0C0C">
             {proyectosDelCliente.length} proyecto{proyectosDelCliente.length === 1 ? "" : "s"}
           </Badge>
@@ -240,10 +234,6 @@ export function ClienteDetail({
               )
             }
           />
-        </DetailBox>
-
-        <DetailBox title="Facturación">
-          <DetailRow k="Valor de referencia antes de IVA" v={cliente.valorReferencia || "—"} />
         </DetailBox>
 
         <DetailBox title="Notas internas">

@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2, CalendarCheck2, MapPin, Settings, Truck } from "lucide-react";
-import { TabButton, TabsShell } from "@/components/ui/primitives";
+import { Building2, CalendarCheck2, MapPin, Settings, Tags, Truck, Wrench } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
 import { useCatalogosStore } from "@/store/catalogos-store";
 import styles from "@/styles/dashboard.module.css";
@@ -11,7 +10,7 @@ import { UbicacionesSection } from "./UbicacionesSection";
 import { EstadosProyectoSection } from "./EstadosProyectoSection";
 import { EtapasClienteSection } from "./EtapasClienteSection";
 
-type Tab = "ubicaciones" | "proveedores" | "proyectos" | "clientes";
+type Seccion = "ubicaciones" | "categorias-proveedor" | "servicios" | "estados-proveedor" | "estados-proyecto" | "etapas-cliente";
 
 /**
  * Configuración (2026-09-09, debajo de Usuarios en el riel): así como admin/super_admin pueden
@@ -20,12 +19,50 @@ type Tab = "ubicaciones" | "proveedores" | "proyectos" | "clientes";
  * para poder agregar más etapas, como más etapas de proceso comercial". Es una pantalla de solo
  * catálogos: nada de esto toca clientes/proveedores/proyectos directamente, solo las listas de
  * las que esos formularios sacan sus opciones (mismo `catalogosApi` que ya usa el resto de la app).
+ *
+ * Rediseño 2026-09-10 (Alicia: "mejorar ese diseño... que sea flexible y uno pueda trabajar
+ * superfácil y rápido ahí, sin problema e inconveniente"). Tres cambios de estructura sobre la v1:
+ *
+ * 1. Las 4 pestañas horizontales pasaron a un riel vertical de 6 secciones (categorías de
+ *    proveedor y servicios ya no comparten pestaña con la nota de "estados de proveedor" -- cada
+ *    catálogo es su propia sección, con su propio contador, así se ve de un vistazo cuánto hay en
+ *    cada uno sin entrar). Un riel vertical también dice de entrada TODO lo que hay para
+ *    administrar, en vez de esconder 3 de 4 detrás de un clic (una pestaña activa no insinúa que
+ *    existan las otras tres tanto como una lista completa siempre visible).
+ * 2. Cada lista (`CatalogList`) ahora agrega arriba y busca cuando hay muchos ítems -- ver ese
+ *    archivo.
+ * 3. Ubicaciones pasó de apilar país->región->ciudad verticalmente (cada clic empujaba todo hacia
+ *    abajo) a un panel de dos columnas que no crece -- ver `UbicacionesSection`.
  */
+const SECCIONES: { id: Seccion; label: string; icon: typeof MapPin }[] = [
+  { id: "ubicaciones", label: "Ubicaciones", icon: MapPin },
+  { id: "categorias-proveedor", label: "Categorías de proveedor", icon: Tags },
+  { id: "servicios", label: "Servicios", icon: Wrench },
+  { id: "estados-proveedor", label: "Estados de proveedor", icon: Truck },
+  { id: "estados-proyecto", label: "Fases y estados de proyecto", icon: CalendarCheck2 },
+  { id: "etapas-cliente", label: "Etapas de proceso comercial", icon: Building2 },
+];
+
 export default function ConfiguracionPage() {
   const user = useAuthStore((s) => s.user);
   const puedeVer = user?.rol === "admin" || user?.rol === "super_admin";
-  const { categoriasProveedor, servicios, fetchBase, addCategoria, updateCategoria, addServicio, updateServicio, removeCatalogo } = useCatalogosStore();
-  const [tab, setTab] = useState<Tab>("ubicaciones");
+  const {
+    paises,
+    categoriasProveedor,
+    servicios,
+    estadosProveedor,
+    estadosProyecto,
+    etapasCliente,
+    fetchBase,
+    addCategoria,
+    updateCategoria,
+    addServicio,
+    updateServicio,
+    addEstadoProveedor,
+    updateEstadoProveedor,
+    removeCatalogo,
+  } = useCatalogosStore();
+  const [seccion, setSeccion] = useState<Seccion>("ubicaciones");
 
   useEffect(() => {
     if (puedeVer) fetchBase();
@@ -40,6 +77,14 @@ export default function ConfiguracionPage() {
     );
   }
 
+  const conteos: Partial<Record<Seccion, number>> = {
+    ubicaciones: paises.length,
+    "categorias-proveedor": categoriasProveedor.length,
+    servicios: servicios.length,
+    "estados-proveedor": estadosProveedor.length,
+    "estados-proyecto": estadosProyecto.length,
+    "etapas-cliente": etapasCliente.length,
+  };
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -50,58 +95,78 @@ export default function ConfiguracionPage() {
         </p>
       </div>
 
-      <TabsShell className="self-start">
-        <TabButton active={tab === "ubicaciones"} icon={MapPin} onClick={() => setTab("ubicaciones")}>Ubicaciones</TabButton>
-        <TabButton active={tab === "proveedores"} icon={Truck} onClick={() => setTab("proveedores")}>Proveedores</TabButton>
-        <TabButton active={tab === "proyectos"} icon={CalendarCheck2} onClick={() => setTab("proyectos")}>Proyectos</TabButton>
-        <TabButton active={tab === "clientes"} icon={Building2} onClick={() => setTab("clientes")}>Clientes</TabButton>
-      </TabsShell>
+      <div className="flex flex-col gap-5 md:flex-row md:items-start">
+        <nav className="flex flex-shrink-0 flex-row flex-wrap gap-1 rounded-[var(--radius-lg)] border border-border bg-surface p-1.5 md:w-[272px] md:flex-col md:flex-nowrap">
+          {SECCIONES.map((s) => {
+            const activa = seccion === s.id;
+            const conteo = conteos[s.id];
+            return (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setSeccion(s.id)}
+                className={`flex cursor-pointer items-start gap-2 rounded-[var(--radius-md)] px-3 py-2 text-left text-[13px] font-medium transition-colors ${
+                  activa ? "bg-text text-white" : "text-text-2 hover:bg-bg"
+                }`}
+              >
+                <s.icon size={14} strokeWidth={1.8} className="mt-0.5 flex-shrink-0" />
+                <span className="min-w-0 flex-1 leading-snug">{s.label}</span>
+                {conteo !== undefined && (
+                  <span className={`flex-shrink-0 font-mono text-[11px] ${activa ? "text-white/70" : "text-text-3"}`}>{conteo}</span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
 
-      {tab === "ubicaciones" && <UbicacionesSection />}
+        <div className="min-w-0 flex-1">
+          {seccion === "ubicaciones" && <UbicacionesSection />}
 
-      {tab === "proveedores" && (
-        <div className="flex flex-col gap-6">
-          <div>
-            <div className="mb-2 text-[13px] font-semibold text-text">Categorías de proveedor</div>
+          {seccion === "categorias-proveedor" && (
             <CatalogList
               items={categoriasProveedor}
+              itemLabel={categoriasProveedor.length === 1 ? "categoría" : "categorías"}
               placeholder="Nueva categoría…"
               emptyLabel="Sin categorías todavía."
               onAdd={addCategoria}
               onUpdate={updateCategoria}
               onRemove={(id) => removeCatalogo("categorias-proveedor", id)}
             />
-          </div>
-          <div>
-            <div className="mb-2 text-[13px] font-semibold text-text">Servicios que prestan</div>
+          )}
+
+          {seccion === "servicios" && (
             <CatalogList
               items={servicios}
+              itemLabel={servicios.length === 1 ? "servicio" : "servicios"}
               placeholder="Nuevo servicio…"
               emptyLabel="Sin servicios todavía."
               onAdd={addServicio}
               onUpdate={updateServicio}
               onRemove={(id) => removeCatalogo("servicios", id)}
             />
-          </div>
-          {/* Alicia 2026-09-09 mencionó también "estados de gestión de proveedores" (Activo/En
-              evaluación/Pausado/Bloqueado) -- a diferencia de todo lo demás en esta pantalla, ESE
-              no es un catálogo real del backend: está fijo en el código (`PROVEEDOR_ESTADOS` en
-              lib/constants.ts). Hacerlo editable acá necesitaría trabajo de backend nuevo (tabla +
-              endpoints), así que se avisa en vez de fingir que ya funciona. */}
-          <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-gray-light px-4 py-3 text-sm text-text-2">
-            Los estados de gestión de proveedores (Activo / En evaluación / Pausado / Bloqueado) todavía no son un catálogo editable -- están fijos en el código. Si los quieres editables desde acá, es un cambio de backend nuevo, no solo de esta pantalla.
-          </div>
-        </div>
-      )}
+          )}
 
-      {tab === "proyectos" && <EstadosProyectoSection />}
+          {/* 2026-09-10 (Alicia: "hazlo"): ya es un catálogo real del backend (antes vivía fijo en
+              el código -- ver EstadoProveedor.cs/docs/schema/28). `proveedores.estado` sigue siendo
+              texto libre, así que agregar/renombrar acá cambia lo que aparece en el desplegable de
+              "Estado" del formulario de Proveedor de inmediato, igual que categorías o servicios. */}
+          {seccion === "estados-proveedor" && (
+            <CatalogList
+              items={estadosProveedor}
+              itemLabel={estadosProveedor.length === 1 ? "estado" : "estados"}
+              placeholder="Nuevo estado…"
+              emptyLabel="Sin estados todavía."
+              onAdd={addEstadoProveedor}
+              onUpdate={updateEstadoProveedor}
+              onRemove={(id) => removeCatalogo("estados-proveedor", id)}
+            />
+          )}
 
-      {tab === "clientes" && (
-        <div>
-          <div className="mb-2 text-[13px] font-semibold text-text">Etapas del proceso comercial</div>
-          <EtapasClienteSection />
+          {seccion === "estados-proyecto" && <EstadosProyectoSection />}
+
+          {seccion === "etapas-cliente" && <EtapasClienteSection />}
         </div>
-      )}
+      </div>
     </div>
   );
 }

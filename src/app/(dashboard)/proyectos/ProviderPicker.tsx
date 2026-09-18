@@ -28,13 +28,15 @@ export function ProviderPicker({
 
   return (
     <div>
+      {/* Alicia 2026-09-18: la lupa quedaba encima de la primera letra del placeholder -- más
+          espacio entre el ícono y el texto (pl-10 en vez de pl-[34px]). */}
       <div className="relative mb-2">
-        <Search size={14} strokeWidth={2} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-3" />
+        <Search size={14} strokeWidth={2} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-3" />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar proveedor por nombre o categoría…"
-          className="h-10 w-full rounded-[var(--radius-md)] border border-border bg-surface py-2 pl-[34px] pr-3 text-[13px] outline-none transition-colors focus:border-teal-mid"
+          className="h-10 w-full rounded-[var(--radius-md)] border border-border bg-surface py-2 pl-10 pr-3 text-[13px] outline-none transition-colors focus:border-teal-mid"
         />
       </div>
       <div className="mb-1.5 text-xs text-text-2">{selectedIds.size} proveedores seleccionados</div>

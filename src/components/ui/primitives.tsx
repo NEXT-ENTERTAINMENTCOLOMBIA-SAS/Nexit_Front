@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { Check, ChevronDown, ChevronLeft, ChevronRight, LayoutGrid, Rows3, Search, Star, X, type LucideIcon } from "lucide-react";
 import { initials } from "@/lib/format";
@@ -191,9 +192,30 @@ export function EmptyState({
  * en el mockup aprobado los KPI "Activos" van en verde (#036B3C) y
  * "Prospectos" en ámbar (#7A4E00), no todos en negro.
  */
-export function StatCard({ n, label, accent }: { n: ReactNode; label: string; accent?: string }) {
+export function StatCard({
+  n,
+  label,
+  accent,
+  icon: Icon,
+}: {
+  n: ReactNode;
+  label: string;
+  accent?: string;
+  /** Ícono opcional (2026-09-18, rediseño de Informes) -- una pastilla suave arriba a la
+   * derecha, con el mismo `accent` de la cifra cuando lo hay. Opt-in: las tarjetas que ya
+   * existían en Clientes/Proveedores/Proyectos no pasan `icon` y no cambian de aspecto. */
+  icon?: LucideIcon;
+}) {
   return (
-    <div className="min-h-[80px] rounded-[var(--radius-lg)] border border-border bg-surface px-4 py-3.5">
+    <div className="relative min-h-[80px] overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface px-4 py-3.5 transition-shadow hover:shadow-[0_1px_4px_rgba(12,12,12,.06)]">
+      {Icon && (
+        <span
+          className="absolute right-3.5 top-3.5 flex h-7 w-7 items-center justify-center rounded-full bg-gray-light"
+          style={accent ? { color: accent, background: `${accent}14` } : undefined}
+        >
+          <Icon size={14} strokeWidth={1.8} />
+        </span>
+      )}
       <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-text-3">{label}</div>
       <div className="mt-1.5 text-[28px] font-semibold leading-none tracking-[-0.03em]" style={accent ? { color: accent } : undefined}>
         {n}
@@ -397,8 +419,10 @@ export interface DropdownGroup {
  * mockup no modelaba con un `<optgroup>`, pero es dato real y no se podía
  * perder solo por pasar del `<select>` nativo a este panel).
  */
-/** Sin tildes y en minúsculas, para que buscar "bogota" encuentre "Bogotá". */
-function normalizarBusqueda(s: string): string {
+/** Sin tildes y en minúsculas, para que buscar "bogota" encuentre "Bogotá" -- exportado porque
+ *  Configuración (CatalogList/UbicacionesSection) reusa exactamente la misma normalización para
+ *  sus buscadores en vez de duplicarla (2026-09-10). */
+export function normalizarBusqueda(s: string): string {
   return s
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -429,18 +453,33 @@ export function Dropdown({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  // Alicia pidió que el panel se acomode a la pantalla: si no cabe hacia abajo
-  // (p. ej. un filtro cerca del borde inferior en una tabla larga), se abre
-  // hacia arriba en su lugar -- antes siempre abría hacia abajo sin importar
-  // el espacio disponible.
-  const [openUpward, setOpenUpward] = useState(false);
+  /**
+   * Posición del panel en coordenadas de viewport (Alicia 2026-09-19: "la categoría se está
+   * cortando... apenas abre el selector se pone todo raro, esta parte se corta"). El panel ya no
+   * es un hijo `absolute` del botón -- se saca por portal a `document.body` y se posiciona con
+   * `position: fixed` calculado desde `getBoundingClientRect()`. Antes, un dropdown angosto (p.
+   * ej. "Categoría", que comparte fila con "Nombre" y se lleva la parte chica) con opciones de
+   * texto largo abría un panel `w-max` que se salía del ancho del Drawer -- y como el Drawer
+   * tiene scroll vertical (`overflow-y-auto`, que por la spec de CSS fuerza también el eje X a
+   * `auto`), lo que se salía del Drawer quedaba cortado en vez de solo salirse de la pantalla. Con
+   * el portal, el único límite real es el viewport, así que abre hacia arriba/abajo e
+   * izquierda/derecha según haya espacio, sin importar en qué contenedor con scroll esté metido.
+   */
+  const [panelPos, setPanelPos] = useState<{ top?: number; bottom?: number; left?: number; right?: number; minWidth: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  // El panel ahora vive por portal en document.body, fuera del DOM de `ref` -- el click-afuera ya
+  // no puede detectarse solo con `ref.current.contains(...)` (todo click dentro del panel
+  // contaría como "afuera" del botón), así que se revisa contra los dos.
+  const panelRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
     function onClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (ref.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -461,16 +500,25 @@ export function Dropdown({
       setQuery("");
       return;
     }
-    // Estimado de la altura del panel (lista + buscador si aplica) para decidir
-    // de qué lado hay espacio real -- no hace falta exacto, solo evitar que se
-    // salga de la pantalla.
+    // Estimado de alto/ancho del panel (lista + buscador si aplica) para decidir de qué lado hay
+    // espacio real -- no hace falta exacto, solo evitar que se salga de la pantalla.
     const flat = groups ? groups.flatMap((g) => g.options) : (options ?? []);
     const estimatedHeight = Math.min(266, flat.length * 33 + 40) + (flat.length > DROPDOWN_SEARCH_THRESHOLD ? 44 : 0) + 20;
+    const labelLengths = [placeholder.length, ...flat.map((o) => o.label.length)];
+    const estimatedWidth = Math.min(290, Math.max(...labelLengths) * 7 + 40);
     const rect = ref.current?.getBoundingClientRect();
     if (rect) {
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
-      setOpenUpward(spaceBelow < estimatedHeight && spaceAbove > spaceBelow);
+      const openUpward = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+      const spaceRight = window.innerWidth - rect.left;
+      const spaceLeft = rect.right;
+      const openLeftward = spaceRight < estimatedWidth && spaceLeft > spaceRight;
+      setPanelPos({
+        ...(openUpward ? { bottom: window.innerHeight - rect.top + 5 } : { top: rect.bottom + 5 }),
+        ...(openLeftward ? { right: window.innerWidth - rect.right } : { left: rect.left }),
+        minWidth: rect.width,
+      });
     }
     searchRef.current?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe recalcular al abrir/cerrar
@@ -503,6 +551,9 @@ export function Dropdown({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
+        // El texto completo por si el botón lo trunca (un nombre de categoría largo, p. ej.) --
+        // Alicia 2026-09-19.
+        title={current ?? undefined}
         className={clsx(
           "flex h-10 w-full cursor-pointer items-center gap-2 rounded-[var(--radius-md)] border px-[11px] text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60",
           current ? "border-text bg-surface font-medium text-text" : "border-border bg-bg font-normal text-text",
@@ -512,14 +563,19 @@ export function Dropdown({
         <span className="min-w-0 flex-1 truncate">{label}</span>
         <ChevronDown size={14} strokeWidth={2} className="flex-shrink-0 text-text-3" />
       </button>
-      {open && !disabled && (
+      {open && !disabled && panelPos && createPortal(
         <>
           <div className="fixed inset-0 z-[60]" onClick={() => setOpen(false)} />
           <div
-            className={clsx(
-              "absolute left-0 z-[61] flex max-h-[266px] w-max min-w-full max-w-[min(290px,calc(100vw-24px))] flex-col overflow-y-auto rounded-[var(--radius-lg)] border border-text bg-surface p-[5px] shadow-[0_12px_34px_rgba(12,12,12,0.16)]",
-              openUpward ? "bottom-[45px]" : "top-[45px]",
-            )}
+            ref={panelRef}
+            style={{
+              top: panelPos.top,
+              bottom: panelPos.bottom,
+              left: panelPos.left,
+              right: panelPos.right,
+              minWidth: panelPos.minWidth,
+            }}
+            className="fixed z-[61] flex max-h-[266px] w-max max-w-[min(290px,calc(100vw-24px))] flex-col overflow-y-auto rounded-[var(--radius-lg)] border border-text bg-surface p-[5px] shadow-[0_12px_34px_rgba(12,12,12,0.16)]"
           >
             {showSearch && (
               <div className="sticky top-0 z-[1] -mx-[5px] -mt-[5px] mb-[5px] flex items-center gap-1.5 border-b border-[#EFEDE7] bg-surface px-[9px] py-[7px]">
@@ -571,7 +627,8 @@ export function Dropdown({
               )}
             </div>
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </div>
   );

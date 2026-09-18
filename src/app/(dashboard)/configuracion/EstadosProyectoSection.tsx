@@ -3,19 +3,25 @@
 import { useState } from "react";
 import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { Input, Row } from "@/components/ui/form";
-import { Button } from "@/components/ui/primitives";
+import { Input } from "@/components/ui/form";
 import { RowAction } from "@/components/ui/Table";
 import { useCatalogosStore } from "@/store/catalogos-store";
 import { useUiStore } from "@/store/ui-store";
-import styles from "@/styles/dashboard.module.css";
+import { ReorderButtons } from "./ReorderButtons";
 import type { EstadoProyecto } from "@/types/api";
 
 /**
  * Fases de proyecto (fijas -- solo se les cambia el nombre, no se crean/eliminan) y, dentro de
- * cada una, sus estados (estos sí se crean/editan/eliminan, con un "orden" que decide en qué
+ * cada una, sus estados (estos sí se crean/editan/eliminan, con un `orden` que decide en qué
  * posición aparecen dentro de esa fase -- mismo `orden` que ya usa el Dropdown de "Estado del
  * proyecto" agrupado por fase en ProjectFormModal).
+ *
+ * Rediseño 2026-09-10: la v1 pedía escribir el número de orden a mano, tanto al agregar como al
+ * editar -- fácil de repetir sin querer el mismo número que un vecino, y nada rápido para
+ * reordenar varios de una vez. Ahora un estado nuevo siempre entra al final de su fase, y para
+ * moverlo se usan las flechas de `ReorderButtons` (intercambian el orden con el vecino y guardan
+ * al toque) -- el número de orden ya no es algo que la persona escribe, es una consecuencia de
+ * dónde arrastra... o más bien empuja, la fila.
  */
 export function EstadosProyectoSection() {
   const { fasesProyecto, estadosProyecto, updateFase, addEstadoProyecto, updateEstadoProyecto, removeCatalogo } = useCatalogosStore();
@@ -25,13 +31,14 @@ export function EstadosProyectoSection() {
   const [faseNombreDraft, setFaseNombreDraft] = useState("");
 
   const [nuevoNombrePorFase, setNuevoNombrePorFase] = useState<Record<number, string>>({});
-  const [nuevoOrdenPorFase, setNuevoOrdenPorFase] = useState<Record<number, string>>({});
+  const [addingFase, setAddingFase] = useState<number | null>(null);
 
   const [editandoEstado, setEditandoEstado] = useState<EstadoProyecto | null>(null);
   const [editNombre, setEditNombre] = useState("");
-  const [editOrden, setEditOrden] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const [aEliminar, setAEliminar] = useState<EstadoProyecto | null>(null);
+  const [moviendoId, setMoviendoId] = useState<string | null>(null);
 
   async function saveFase(fase: number) {
     if (!faseNombreDraft.trim()) return;
@@ -46,33 +53,37 @@ export function EstadosProyectoSection() {
 
   async function handleAdd(fase: number) {
     const nombre = (nuevoNombrePorFase[fase] ?? "").trim();
-    const ordenTxt = nuevoOrdenPorFase[fase] ?? "";
     if (!nombre) return;
-    const orden = ordenTxt.trim() ? Number(ordenTxt) : estadosProyecto.filter((e) => e.fase === fase).length + 1;
+    const deLaFase = estadosProyecto.filter((e) => e.fase === fase);
+    const orden = deLaFase.length === 0 ? 1 : Math.max(...deLaFase.map((e) => e.orden)) + 1;
+    setAddingFase(fase);
     try {
       await addEstadoProyecto({ nombre, fase, orden });
       setNuevoNombrePorFase((s) => ({ ...s, [fase]: "" }));
-      setNuevoOrdenPorFase((s) => ({ ...s, [fase]: "" }));
       pushToast("Estado agregado", "success");
     } catch (err) {
       pushToast(err instanceof Error ? err.message : "No se pudo agregar el estado", "danger");
+    } finally {
+      setAddingFase(null);
     }
   }
 
   function startEditEstado(e: EstadoProyecto) {
     setEditandoEstado(e);
     setEditNombre(e.nombre);
-    setEditOrden(String(e.orden));
   }
 
   async function saveEditEstado() {
     if (!editandoEstado || !editNombre.trim()) return;
+    setSavingEdit(true);
     try {
-      await updateEstadoProyecto(editandoEstado.id, { nombre: editNombre.trim(), fase: editandoEstado.fase, orden: Number(editOrden) || editandoEstado.orden });
+      await updateEstadoProyecto(editandoEstado.id, { nombre: editNombre.trim(), fase: editandoEstado.fase, orden: editandoEstado.orden });
       setEditandoEstado(null);
       pushToast("Estado actualizado", "success");
     } catch (err) {
       pushToast(err instanceof Error ? err.message : "No se pudo actualizar el estado", "danger");
+    } finally {
+      setSavingEdit(false);
     }
   }
 
@@ -84,6 +95,24 @@ export function EstadosProyectoSection() {
       setAEliminar(null);
     } catch (err) {
       pushToast(err instanceof Error ? err.message : "No se pudo eliminar -- puede haber proyectos en ese estado", "danger");
+    }
+  }
+
+  async function mover(fase: number, e: EstadoProyecto, direccion: -1 | 1) {
+    const deLaFase = estadosProyecto.filter((x) => x.fase === fase).sort((a, b) => a.orden - b.orden);
+    const idx = deLaFase.findIndex((x) => x.id === e.id);
+    const vecino = deLaFase[idx + direccion];
+    if (!vecino) return;
+    setMoviendoId(e.id);
+    try {
+      await Promise.all([
+        updateEstadoProyecto(e.id, { nombre: e.nombre, fase: e.fase, orden: vecino.orden }),
+        updateEstadoProyecto(vecino.id, { nombre: vecino.nombre, fase: vecino.fase, orden: e.orden }),
+      ]);
+    } catch (err) {
+      pushToast(err instanceof Error ? err.message : "No se pudo mover -- vuelve a intentar", "danger");
+    } finally {
+      setMoviendoId(null);
     }
   }
 
@@ -109,30 +138,50 @@ export function EstadosProyectoSection() {
                   <RowAction label="Editar nombre de la fase" onClick={() => { setEditandoFase(f.fase); setFaseNombreDraft(f.nombre); }}>
                     <Pencil size={12} strokeWidth={1.8} />
                   </RowAction>
+                  <span className="ml-auto text-xs text-text-3">{estados.length} {estados.length === 1 ? "estado" : "estados"}</span>
                 </>
               )}
             </div>
 
-            <div className="mb-2 flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface">
+            <div className="flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface transition-shadow hover:shadow-[0_1px_6px_rgba(12,12,12,.05)]">
+              <div className="flex items-center gap-2 border-b border-[#EFEDE7] bg-gray-light px-4 py-2.5">
+                <Input
+                  value={nuevoNombrePorFase[f.fase] ?? ""}
+                  onChange={(e) => setNuevoNombrePorFase((s) => ({ ...s, [f.fase]: e.target.value }))}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAdd(f.fase); } }}
+                  placeholder={`Nuevo estado en ${f.nombre}…`}
+                  className="h-9 flex-1 bg-surface"
+                />
+                <RowAction label="Agregar" onClick={() => handleAdd(f.fase)} disabled={addingFase === f.fase || !(nuevoNombrePorFase[f.fase] ?? "").trim()}>
+                  <Plus size={14} strokeWidth={2} />
+                </RowAction>
+              </div>
+
               {estados.length === 0 && <div className="px-4 py-3.5 text-sm text-text-3">Sin estados en esta fase todavía.</div>}
               {estados.map((e, idx) => (
                 <div key={e.id} className={`flex items-center gap-2 px-4 py-2.5 ${idx !== estados.length - 1 ? "border-b border-[#EFEDE7]" : ""}`}>
                   {editandoEstado?.id === e.id ? (
                     <>
-                      <Input value={editNombre} onChange={(ev) => setEditNombre(ev.target.value)} placeholder="Nombre" className="h-9 flex-1" />
                       <Input
-                        type="number"
-                        value={editOrden}
-                        onChange={(ev) => setEditOrden(ev.target.value)}
-                        placeholder="Orden"
-                        className="h-9 w-[90px] flex-shrink-0"
+                        autoFocus
+                        value={editNombre}
+                        onChange={(ev) => setEditNombre(ev.target.value)}
+                        onKeyDown={(ev) => { if (ev.key === "Enter") { ev.preventDefault(); saveEditEstado(); } if (ev.key === "Escape") setEditandoEstado(null); }}
+                        placeholder="Nombre"
+                        className="h-9 flex-1"
                       />
-                      <RowAction label="Guardar" onClick={saveEditEstado}><Check size={14} strokeWidth={2} /></RowAction>
+                      <RowAction label="Guardar" onClick={saveEditEstado} disabled={savingEdit}><Check size={14} strokeWidth={2} /></RowAction>
                       <RowAction label="Cancelar" onClick={() => setEditandoEstado(null)}><X size={14} strokeWidth={2} /></RowAction>
                     </>
                   ) : (
                     <>
-                      <span className="w-6 flex-shrink-0 font-mono text-xs text-text-3">{e.orden}</span>
+                      <ReorderButtons
+                        onUp={() => mover(f.fase, e, -1)}
+                        onDown={() => mover(f.fase, e, 1)}
+                        disabledUp={idx === 0}
+                        disabledDown={idx === estados.length - 1}
+                        moving={moviendoId === e.id}
+                      />
                       <span className="min-w-0 flex-1 truncate text-[13px]">{e.nombre}</span>
                       <RowAction label="Editar" onClick={() => startEditEstado(e)}><Pencil size={13} strokeWidth={1.8} /></RowAction>
                       <RowAction label="Eliminar" tone="danger" onClick={() => setAEliminar(e)}><Trash2 size={13} strokeWidth={1.8} /></RowAction>
@@ -140,35 +189,6 @@ export function EstadosProyectoSection() {
                   )}
                 </div>
               ))}
-            </div>
-
-            <div className={styles.filtersPanel}>
-              <Row cols={2}>
-                <Input
-                  value={nuevoNombrePorFase[f.fase] ?? ""}
-                  onChange={(e) => setNuevoNombrePorFase((s) => ({ ...s, [f.fase]: e.target.value }))}
-                  placeholder={`Nuevo estado en ${f.nombre}…`}
-                  className="h-10"
-                />
-                <div className="flex min-w-0 gap-2">
-                  <Input
-                    type="number"
-                    value={nuevoOrdenPorFase[f.fase] ?? ""}
-                    onChange={(e) => setNuevoOrdenPorFase((s) => ({ ...s, [f.fase]: e.target.value }))}
-                    placeholder="Orden (opcional)"
-                    className="h-10 w-[140px] min-w-0 flex-1"
-                  />
-                  <Button
-                    variant="primary"
-                    icon={Plus}
-                    onClick={() => handleAdd(f.fase)}
-                    disabled={!(nuevoNombrePorFase[f.fase] ?? "").trim()}
-                    className="flex-shrink-0"
-                  >
-                    Agregar
-                  </Button>
-                </div>
-              </Row>
             </div>
           </div>
         );

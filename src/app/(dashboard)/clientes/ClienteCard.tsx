@@ -7,9 +7,8 @@ import { useCatalogosStore } from "@/store/catalogos-store";
 import type { Cliente } from "@/types/api";
 
 export function ClienteCard({ cliente, onOpen, onEdit }: { cliente: Cliente; onOpen: () => void; onEdit: () => void }) {
-  const { paises, etapasCliente, regionesPorPais, ciudadesPorRegion } = useCatalogosStore();
+  const { paises, regionesPorPais, ciudadesPorRegion } = useCatalogosStore();
   const sc = statusColor(CLIENT_STATUS_COLORS, cliente.estado);
-  const etapaNombre = etapasCliente.find((e) => e.id === cliente.etapaId)?.nombre;
   // ClientesPage precarga región/ciudad para todos los países/regiones presentes en la lista
   // (ver su useEffect) para que esto resuelva "Ciudad · Departamento · País" sin pedirle un
   // fetch aparte a cada tarjeta. Si el cliente es de antes del catálogo (o nunca se le asignó),
@@ -46,11 +45,6 @@ export function ClienteCard({ cliente, onOpen, onEdit }: { cliente: Cliente; onO
         <Badge bg={sc.bg} color={sc.c}>
           {cliente.estado}
         </Badge>
-        {etapaNombre && (
-          <Badge bg="var(--gray-light)" color="var(--text-2)">
-            {etapaNombre}
-          </Badge>
-        )}
         <span className="min-w-0 flex-1 truncate text-xs text-text-3">{cliente.contacto || "Sin contacto"}</span>
         <button
           type="button"

@@ -20,6 +20,20 @@ export interface AttachmentLike {
   tamanoBytes?: number | null;
 }
 
+/**
+ * Un archivo/link "en espera" en un formulario de REGISTRO todavía sin guardar -- Alicia
+ * 2026-09-10: "apenas abro el formulario, me tenía que haber salido esto [ya poder agregar]",
+ * no solo apenas se registra. Como todavía no hay un id real de la entidad, esto vive
+ * completamente en memoria del formulario (levantado por el `page.tsx` de cada módulo, no acá
+ * adentro, para que sobreviva aunque este componente se vuelva a montar) hasta que la entidad
+ * se guarda de verdad -- ahí `handleSave` sube cada archivo y crea cada link uno por uno con el
+ * id ya real, y recién ahí deja de ser "pendiente".
+ */
+export interface PendingAttachment extends AttachmentLike {
+  /** Solo para tipo "file": el archivo real todavía sin subir. */
+  file?: File;
+}
+
 /** Las 5 operaciones que cada *-adjuntos-service.ts expone, todas colgadas del mismo id de
  * entidad (proveedorId, clienteId o proyectoId según el caso). */
 export interface AttachmentsApi<T extends AttachmentLike> {
@@ -38,15 +52,28 @@ export interface AttachmentsApi<T extends AttachmentLike> {
  * Rediseñado 2026-09-08 (Alicia: "el diseño de archivos y enlaces... muy feo, mejora este
  * diseño") -- la zona de arrastre y las filas de la lista eran muy planas y apretadas
  * comparadas con el resto de la app; ahora usan el mismo lenguaje visual que ya se estableció
- * en otras pantallas (cajas con borde suave tipo DetailBox, ícono en una placa redondeada,
- * botón de acción principal en verde-azulado sólido como el "+ Agregar" de servicios).
+ * en otras pantallas.
+ *
+ * Modo "en espera" agregado 2026-09-10 (Alicia, tras varias vueltas: "apenas abro el
+ * formulario, me tenía que haber salido esto... no tenía que haberle yo escribir el nombre...
+ * y darle registrar"). Antes de esto, `entityId` siempre era un id real (o el formulario ni
+ * mostraba esta sección) -- ahora `entityId` puede ser `null` (registro nuevo, sin guardar
+ * todavía), y en ese caso el componente NO llama a la API para nada: arrastrar un archivo o
+ * agregar un link solo los guarda en la lista `pending` que vive en el `page.tsx` del módulo
+ * (subida por props, junto con `onPendingChange`), exactamente con la misma UI de siempre. El
+ * `page.tsx` es quien de verdad sube/crea cada uno, uno por uno, apenas el registro se guarda.
  */
 export function EntityAttachments<T extends AttachmentLike>({
   entityId,
   api,
+  pending,
+  onPendingChange,
 }: {
-  entityId: string;
+  entityId: string | null;
   api: AttachmentsApi<T>;
+  /** Solo se usa cuando `entityId` es `null`. */
+  pending?: PendingAttachment[];
+  onPendingChange?: (next: PendingAttachment[]) => void;
 }) {
   const pushToast = useUiStore((s) => s.pushToast);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -54,13 +81,14 @@ export function EntityAttachments<T extends AttachmentLike>({
   const [linkName, setLinkName] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [adjuntos, setAdjuntos] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(entityId !== null);
   const [uploading, setUploading] = useState(false);
   // id del adjunto que se está descargando ahora mismo (pidiendo la URL firmada) --
   // por id y no un booleano global, porque puede haber varios adjuntos en la lista.
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (entityId === null) return; // nada que cargar -- la lista viene de `pending` (ver arriba)
     let cancelled = false;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial adjuntos load on mount/entityId change
     setLoading(true);
@@ -83,6 +111,18 @@ export function EntityAttachments<T extends AttachmentLike>({
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
+    if (entityId === null) {
+      const next = [...(pending ?? [])];
+      for (const file of Array.from(files)) {
+        if (file.size > MAX_FILE_BYTES) {
+          pushToast(`"${file.name}" supera el máximo de 20 MB`, "danger");
+          continue;
+        }
+        next.push({ id: crypto.randomUUID(), tipo: "file", nombre: file.name, tamanoBytes: file.size, file });
+      }
+      onPendingChange?.(next);
+      return;
+    }
     for (const file of Array.from(files)) {
       if (file.size > MAX_FILE_BYTES) {
         pushToast(`"${file.name}" supera el máximo de 20 MB`, "danger");
@@ -113,6 +153,12 @@ export function EntityAttachments<T extends AttachmentLike>({
       pushToast("Ese link no es una URL válida (debe empezar con http:// o https://).", "danger");
       return;
     }
+    if (entityId === null) {
+      onPendingChange?.([...(pending ?? []), { id: crypto.randomUUID(), tipo: "link", nombre, url: safeUrl }]);
+      setLinkName("");
+      setLinkUrl("");
+      return;
+    }
     try {
       const created = await api.crearLink(entityId, { tipo: "link", nombre, url: safeUrl });
       setAdjuntos((prev) => [...prev, created]);
@@ -124,6 +170,10 @@ export function EntityAttachments<T extends AttachmentLike>({
   }
 
   async function removeAdjunto(id: string) {
+    if (entityId === null) {
+      onPendingChange?.((pending ?? []).filter((a) => a.id !== id));
+      return;
+    }
     try {
       await api.remove(entityId, id);
       setAdjuntos((prev) => prev.filter((a) => a.id !== id));
@@ -132,7 +182,25 @@ export function EntityAttachments<T extends AttachmentLike>({
     }
   }
 
-  async function openAdjunto(a: T) {
+  async function openAdjunto(a: AttachmentLike) {
+    if (entityId === null) {
+      if (a.tipo === "link") {
+        const safeUrl = a.url ? toSafeHref(a.url) : null;
+        if (!safeUrl) {
+          pushToast("Este link no es una URL http(s) válida.", "danger");
+          return;
+        }
+        window.open(safeUrl, "_blank", "noreferrer");
+        return;
+      }
+      // Archivo todavía sin subir -- se abre una vista previa local (nunca tocó el servidor).
+      const file = (a as PendingAttachment).file;
+      if (!file) return;
+      const objectUrl = URL.createObjectURL(file);
+      window.open(objectUrl, "_blank", "noreferrer");
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      return;
+    }
     if (a.tipo === "link") {
       // Segunda validación acá (además de la de addLink) -- por si el
       // adjunto se guardó antes de este arreglo, o se creó llamando a la
@@ -160,6 +228,8 @@ export function EntityAttachments<T extends AttachmentLike>({
       setDownloadingId(null);
     }
   }
+
+  const list: AttachmentLike[] = entityId === null ? (pending ?? []) : adjuntos;
 
   return (
     <div>
@@ -244,10 +314,10 @@ export function EntityAttachments<T extends AttachmentLike>({
 
       <div className="flex flex-col gap-2">
         {loading && <div className="py-2 text-center text-xs text-text-3">Cargando…</div>}
-        {!loading && adjuntos.length === 0 && (
+        {!loading && list.length === 0 && (
           <div className="py-2 text-center text-xs text-text-3">Sin archivos ni links aún</div>
         )}
-        {adjuntos.map((a) => {
+        {list.map((a) => {
           const Icon = fileIcon(a.nombre, a.tipo === "link" ? "link" : "file");
           return (
             <div

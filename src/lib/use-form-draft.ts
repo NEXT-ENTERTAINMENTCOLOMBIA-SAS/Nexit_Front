@@ -50,6 +50,6 @@ export function useFormDraftAutosave<T>(key: string | null, value: T, enabled: b
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- value se compara por referencia a propósito, se dispara en cada cambio real del form
+     
   }, [key, value, enabled]);
 }

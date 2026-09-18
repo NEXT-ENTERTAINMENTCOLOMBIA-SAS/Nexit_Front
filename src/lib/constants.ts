@@ -71,6 +71,17 @@ export const BRIEF_STATUS_COLORS: Record<string, { bg: string; c: string }> = {
   Aprobado: { bg: "#EAF3DE", c: "#27500A" },
 };
 
+/** Área de una entrada de la bitácora de seguimiento de un proyecto (Alicia 2026-09-18: "hazla
+ * más útil, no la veo útil" -- un color por área ayuda a distinguir de un vistazo, sin leer
+ * cada etiqueta, igual que ya hace el resto de los badges de estado de esta pantalla). Debe
+ * calzar con AREAS_SEGUIMIENTO en ProjectDetail.tsx y `Areas` en ProyectoValidators.cs. */
+export const AREA_SEGUIMIENTO_COLORS: Record<string, { bg: string; c: string }> = {
+  General: { bg: "#F1EFE8", c: "#444441" },
+  Creativo: { bg: "#EEEDFE", c: "#26215C" },
+  Comercial: { bg: "#EAF3DE", c: "#27500A" },
+  Administrativo: { bg: "#E6F1FB", c: "#0C447C" },
+};
+
 /**
  * Los 4 roles de negocio (Nexit_Back/docs/06), de mayor a menor privilegio. Una sola fuente para la
  * tabla de usuarios, el panel de perfil, el modal de invitar y el de editar -- antes cada uno tenía

@@ -21,7 +21,7 @@ import type { InvitacionFallida, Rol } from "@/types/api";
 const MAXIMO_POR_LOTE = 25;
 
 /** Lo que separa un correo del siguiente al escribir o pegar: coma, punto y coma, espacio o salto de línea. */
-const SEPARADORES = /[\\s,;]+/;
+const SEPARADORES = /[\s,;]+/;
 
 /** Un correo del lote junto con el rol que se le asignó al agregarlo. */
 type Destinatario = { email: string; rol: Rol };

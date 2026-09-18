@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Bell, BellOff, CheckCheck, ShieldQuestion, UserPlus, UserX } from "lucide-react";
+import { Bell, BellOff, CheckCheck, ShieldQuestion, UserPlus, UserX, X } from "lucide-react";
 import { haceCuanto } from "@/lib/format";
 import { fmtFechaHora } from "@/lib/historial";
 import { notificacionesApi } from "@/services/api/notificaciones-service";
@@ -110,40 +110,61 @@ export function NotificationsBell() {
     }
   }
 
+  // Ícono de X por fila: descarta (borra de verdad) una notificación ya vista -- no navega ni la
+  // marca leída, así que el clic en la X no dispara markRead (ver stopPropagation abajo).
+  async function dismiss(n: Notificacion, e: ReactMouseEvent) {
+    e.stopPropagation();
+    setItems((prev) => prev.filter((x) => x.id !== n.id));
+    try {
+      await notificacionesApi.descartar(n.id);
+    } catch {
+      // Si falla, se recarga la bandeja real en vez de dejarla desincronizada.
+      notificacionesApi.misNotificaciones().then(setItems).catch(() => {});
+    }
+  }
+
   function fila(n: Notificacion) {
     const estilo = ESTILO_POR_TIPO[n.tipo] ?? ESTILO_POR_DEFECTO;
     const Icon = estilo.icon;
     return (
-      <button
+      <div
         key={n.id}
-        type="button"
         role="menuitem"
-        onClick={() => markRead(n)}
         className={clsx(
-          "flex w-full gap-3 border-b border-[#EFEDE7] px-3.5 py-3 text-left transition-colors last:border-b-0 hover:bg-[#F4F3EF]",
+          "group flex w-full items-start gap-3 border-b border-[#EFEDE7] px-3.5 py-3 text-left transition-colors last:border-b-0 hover:bg-[#F4F3EF]",
           !n.leida && "bg-[#FBFAF7]",
         )}
       >
-        <span
-          aria-hidden
-          className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full"
-          style={{ background: estilo.bg, color: estilo.c }}
-        >
-          <Icon size={15} strokeWidth={1.9} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="flex items-start gap-1.5">
-            <span className={clsx("flex-1 text-[13px] leading-snug", n.leida ? "font-medium text-text-2" : "font-semibold text-text")}>
-              {n.titulo}
+        <button type="button" onClick={() => markRead(n)} className="flex min-w-0 flex-1 gap-3 text-left">
+          <span
+            aria-hidden
+            className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full"
+            style={{ background: estilo.bg, color: estilo.c }}
+          >
+            <Icon size={15} strokeWidth={1.9} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="flex items-start gap-1.5">
+              <span className={clsx("flex-1 text-[13px] leading-snug", n.leida ? "font-medium text-text-2" : "font-semibold text-text")}>
+                {n.titulo}
+              </span>
+              {!n.leida && <span aria-hidden className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-green" />}
             </span>
-            {!n.leida && <span aria-hidden className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-green" />}
+            <span className="mt-0.5 block text-[12px] leading-snug text-text-2">{n.mensaje}</span>
+            <span className="mt-1 block font-mono text-[10.5px] text-text-3" title={fmtFechaHora(n.fechaCreacion)}>
+              {haceCuanto(n.fechaCreacion)}
+            </span>
           </span>
-          <span className="mt-0.5 block text-[12px] leading-snug text-text-2">{n.mensaje}</span>
-          <span className="mt-1 block font-mono text-[10.5px] text-text-3" title={fmtFechaHora(n.fechaCreacion)}>
-            {haceCuanto(n.fechaCreacion)}
-          </span>
-        </span>
-      </button>
+        </button>
+        <button
+          type="button"
+          aria-label="Descartar esta notificación"
+          onClick={(e) => dismiss(n, e)}
+          className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-text-3 opacity-0 transition-opacity hover:bg-gray-light hover:text-text group-hover:opacity-100"
+        >
+          <X size={13} strokeWidth={2} />
+        </button>
+      </div>
     );
   }
 

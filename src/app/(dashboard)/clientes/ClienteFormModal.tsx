@@ -5,7 +5,7 @@ import { Mail, Phone, X } from "lucide-react";
 import { Drawer, FormDrawerBody, FormDrawerFooter, FormDrawerHeader, FormDrawerSection } from "@/components/ui/Drawer";
 import { Dropdown } from "@/components/ui/primitives";
 import { DeleteOrRequestButton } from "@/components/ui/DeleteAction";
-import { EntityAttachments } from "@/components/ui/EntityAttachments";
+import { EntityAttachments, type PendingAttachment } from "@/components/ui/EntityAttachments";
 import { Field, Input, Row, Textarea } from "@/components/ui/form";
 import { CLIENTE_ESTADOS } from "@/lib/constants";
 import { parseCSVFirstRow } from "@/lib/csv";
@@ -61,6 +61,8 @@ export function ClienteFormModal({
   onSave,
   onDelete,
   editing,
+  pendingAdjuntos,
+  onPendingAdjuntosChange,
 }: {
   open: boolean;
   onClose: () => void;
@@ -69,12 +71,14 @@ export function ClienteFormModal({
    * nuevo, todavía sin guardar, no tiene nada que eliminar. */
   onDelete?: () => void;
   editing: Cliente | null;
+  /** Archivos/links agregados en el formulario ANTES de guardar (Alicia 2026-09-10: deben
+   * poder agregarse apenas se abre "Nuevo cliente", no solo después de registrar) -- vive en
+   * el `page.tsx` para que sobreviva si este modal se remonta. Se ignora si `editing` no es
+   * null (ahí "Archivos y enlaces" ya trabaja en vivo contra el id real). */
+  pendingAdjuntos: PendingAttachment[];
+  onPendingAdjuntosChange: (next: PendingAttachment[]) => void;
 }) {
-  const { paises, etapasCliente, regionesPorPais, ciudadesPorRegion, fetchBase, fetchRegiones, fetchCiudades } = useCatalogosStore();
-  const etapaOptions = useMemo(
-    () => [...etapasCliente].sort((a, b) => a.orden - b.orden).map((e) => ({ value: e.id, label: `${e.nombre} (${e.porcentajeProceso}%)` })),
-    [etapasCliente],
-  );
+  const { paises, regionesPorPais, ciudadesPorRegion, fetchBase, fetchRegiones, fetchCiudades } = useCatalogosStore();
   const pushToast = useUiStore((s) => s.pushToast);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -121,7 +125,7 @@ export function ClienteFormModal({
       setForm(draft);
       pushToast("Recuperamos un borrador sin guardar de este formulario.", "info");
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting the form to match whichever cliente was opened for editing
+       
       setForm(base);
     }
     if (editing?.paisId) fetchRegiones(editing.paisId);
@@ -278,46 +282,18 @@ export function ClienteFormModal({
 
       <FormDrawerBody>
         <FormDrawerSection number="01" title="Quién es">
-          {editing ? (
-            <div className="grid grid-cols-1 gap-3 min-[1001px]:grid-cols-[1.6fr_1fr]">
-              <Field label="Nombre de la empresa" required error={errors.nombre}>
-                <Input
-                  value={form.nombre}
-                  onChange={(e) => set("nombre", e.target.value)}
-                  placeholder="Ej. Grupo Vitalis"
-                />
-              </Field>
-              <Field label="Estado">
-                <Dropdown
-                  value={form.estado}
-                  onChange={(v) => set("estado", v || CLIENTE_ESTADOS[0])}
-                  placeholder="Elige un estado"
-                  options={ESTADO_OPTIONS}
-                />
-              </Field>
-            </div>
-          ) : (
-            // Un cliente nuevo siempre entra como "Activo" -- el estado (Prospecto/Inactivo)
-            // solo se decide después, al editarlo, no en el momento de registrarlo.
-            <Field
-              label="Nombre de la empresa"
-              required
-              error={errors.nombre}
-              hint={
-                <div className="mt-1.5 text-xs text-text-3">
-                  Se registrará como <span className="font-medium text-text-2">Activo</span>. Podrás cambiar el estado
-                  más adelante, al editarlo.
-                </div>
-              }
-            >
+          {/* Alicia 2026-09-19: "nombre de la empresa" al lado de "industria", no una arriba de
+              la otra -- antes, al editar, nombre iba junto a estado e industria quedaba suelta
+              abajo; ahora nombre+industria van siempre juntas, y estado (solo aplica al editar)
+              pasa a su propia fila. */}
+          <div className="grid grid-cols-1 gap-3 min-[1001px]:grid-cols-[1.6fr_1fr]">
+            <Field label="Nombre de la empresa" required error={errors.nombre}>
               <Input
                 value={form.nombre}
                 onChange={(e) => set("nombre", e.target.value)}
                 placeholder="Ej. Grupo Vitalis"
               />
             </Field>
-          )}
-          <Row cols={2}>
             <Field label="Industria">
               <Input
                 value={form.sector}
@@ -325,15 +301,20 @@ export function ClienteFormModal({
                 placeholder="Consumo masivo, tecnología, finanzas…"
               />
             </Field>
-            <Field label="Etapa del proceso comercial" hint={<div className="mt-1.5 text-xs text-text-3">Dónde va la relación con este cliente (E1-E6). No aplica una vez que ya hay un proyecto en curso.</div>}>
+          </div>
+          {editing && (
+            // Un cliente nuevo siempre entra como "Activo" -- el estado (Prospecto/Inactivo) solo
+            // se decide después, al editarlo, no en el momento de registrarlo (Alicia 2026-09-18,
+            // "ya sabemos que va a quedar activo, no hace falta decirlo").
+            <Field label="Estado">
               <Dropdown
-                value={form.etapaId}
-                onChange={(v) => set("etapaId", v)}
-                placeholder="Sin asignar"
-                options={etapaOptions}
+                value={form.estado}
+                onChange={(v) => set("estado", v || CLIENTE_ESTADOS[0])}
+                placeholder="Elige un estado"
+                options={ESTADO_OPTIONS}
               />
             </Field>
-          </Row>
+          )}
         </FormDrawerSection>
 
         <FormDrawerSection number="02" title="Dónde está">
@@ -494,26 +475,23 @@ export function ClienteFormModal({
 
         <FormDrawerSection number="04" title="Qué recordar">
           <Field label="Notas internas">
-            <Textarea value={form.notas} onChange={(e) => set("notas", e.target.value)} placeholder="Historial, condiciones…" />
-          </Field>
-        </FormDrawerSection>
-
-        <FormDrawerSection number="05" title="Facturación">
-          <Field label="Valor de referencia antes de IVA">
-            <Input
-              value={form.valorReferencia}
-              onChange={(e) => set("valorReferencia", e.target.value)}
-              placeholder="Ej. $50.000.000 / año"
+            <Textarea
+              value={form.notas}
+              onChange={(e) => set("notas", e.target.value)}
+              placeholder="Historial, condiciones…"
+              rows={7}
+              style={{ minHeight: 160 }}
             />
           </Field>
         </FormDrawerSection>
 
-        <FormDrawerSection number="06" title="Archivos y enlaces">
-          {editing ? (
-            <EntityAttachments entityId={editing.id} api={clienteAdjuntosApi} />
-          ) : (
-            <p className="text-sm text-text-3">Guarda el cliente primero para poder subir archivos o agregar enlaces.</p>
-          )}
+        <FormDrawerSection number="05" title="Archivos y enlaces">
+          <EntityAttachments
+            entityId={editing?.id ?? null}
+            api={clienteAdjuntosApi}
+            pending={pendingAdjuntos}
+            onPendingChange={onPendingAdjuntosChange}
+          />
         </FormDrawerSection>
       </FormDrawerBody>
 

@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 import { Drawer, FormDrawerBody, FormDrawerFooter, FormDrawerHeader, FormDrawerSection } from "@/components/ui/Drawer";
 import { Dropdown } from "@/components/ui/primitives";
 import { DeleteOrRequestButton } from "@/components/ui/DeleteAction";
-import { EntityAttachments } from "@/components/ui/EntityAttachments";
+import { EntityAttachments, type PendingAttachment } from "@/components/ui/EntityAttachments";
 import { Field, Input, Row, Textarea } from "@/components/ui/form";
 import { StarRatingInput } from "@/components/ui/StarRating";
 import { PROVEEDOR_ESTADOS } from "@/lib/constants";
@@ -60,8 +60,6 @@ const emptyForm: FormState = {
   servicioIds: [],
 };
 
-const ESTADO_OPTIONS = PROVEEDOR_ESTADOS.map((e) => ({ value: e, label: e }));
-
 /** Niveles habituales de "Presupuesto habitual" (mkDD del mockup aprobado toma esta lista de
  * los valores ya usados por otros proveedores -- acá se fija una base razonable y se le suma
  * el valor actual si no está, para no perder presupuestos ya guardados como texto libre antes
@@ -78,6 +76,8 @@ export function ProviderFormModal({
   onSave,
   onDelete,
   editing,
+  pendingAdjuntos,
+  onPendingAdjuntosChange,
 }: {
   open: boolean;
   onClose: () => void;
@@ -86,14 +86,16 @@ export function ProviderFormModal({
    * nuevo, todavía sin guardar, no tiene nada que eliminar. */
   onDelete?: () => void;
   editing: Proveedor | null;
+  /** Archivos/links agregados ANTES de guardar (Alicia 2026-09-10) -- ver el mismo patrón en
+   * ClienteFormModal.tsx. */
+  pendingAdjuntos: PendingAttachment[];
+  onPendingAdjuntosChange: (next: PendingAttachment[]) => void;
 }) {
-  const { paises, categoriasProveedor, servicios, regionesPorPais, ciudadesPorRegion, fetchBase, fetchRegiones, fetchCiudades, addServicio } =
-    useCatalogosStore();
+  const { paises, categoriasProveedor, estadosProveedor, regionesPorPais, ciudadesPorRegion, fetchBase, fetchRegiones, fetchCiudades } = useCatalogosStore();
   const pushToast = useUiStore((s) => s.pushToast);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const panelRef = useRef<HTMLDivElement>(null);
-  const [servicioDraft, setServicioDraft] = useState("");
   const [telDraft, setTelDraft] = useState("");
   const [emailDraft, setEmailDraft] = useState("");
 
@@ -140,7 +142,7 @@ export function ProviderFormModal({
       setForm(draft);
       pushToast("Recuperamos un borrador sin guardar de este formulario.", "info");
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting the form to match whichever proveedor was opened for editing
+       
       setForm(base);
     }
     if (editing?.paisId) fetchRegiones(editing.paisId);
@@ -171,22 +173,6 @@ export function ProviderFormModal({
     set("regionId", regionId);
     set("ciudadId", "");
     if (regionId) fetchCiudades(regionId);
-  }
-
-  function toggleServicio(id: string) {
-    set("servicioIds", form.servicioIds.includes(id) ? form.servicioIds.filter((s) => s !== id) : [...form.servicioIds, id]);
-  }
-
-  async function addServicioNuevo() {
-    const nombre = servicioDraft.trim();
-    if (!nombre) return;
-    try {
-      const creado = await addServicio(nombre);
-      toggleServicio(creado.id);
-      setServicioDraft("");
-    } catch (err) {
-      pushToast(err instanceof Error ? err.message : "No se pudo agregar el servicio", "danger");
-    }
   }
 
   function addTelefono() {
@@ -314,7 +300,9 @@ export function ProviderFormModal({
 
       <FormDrawerBody>
         <FormDrawerSection number="01" title="Quién es">
-          <div className="grid grid-cols-1 gap-3 min-[1001px]:grid-cols-[1.6fr_1fr]">
+          {/* Alicia 2026-09-19: "categoría" se cortaba -- de 1.6fr/1fr a 1.2fr/1fr, más parejo,
+              para que le entre mejor un nombre de categoría largo. */}
+          <div className="grid grid-cols-1 gap-3 min-[1001px]:grid-cols-[1.2fr_1fr]">
             <Field label="Nombre del proveedor" required error={errors.nombre}>
               <Input
                 value={form.nombre}
@@ -337,7 +325,7 @@ export function ProviderFormModal({
                 value={form.estado}
                 onChange={(v) => set("estado", v || PROVEEDOR_ESTADOS[0])}
                 placeholder="Elige un estado"
-                options={ESTADO_OPTIONS}
+                options={withCurrent(estadosProveedor.map((e) => e.nombre), form.estado).map((e) => ({ value: e, label: e }))}
               />
             </Field>
             <Field label="Valoración">
@@ -377,23 +365,16 @@ export function ProviderFormModal({
               />
             </Field>
           </Row>
-          <Row cols={2}>
-            <Field label="Hasta dónde viaja">
-              <Input
-                value={form.cobertura}
-                onChange={(e) => set("cobertura", e.target.value)}
-                placeholder="Nacional, regional, solo su ciudad…"
-              />
-            </Field>
-            <Field label="Presupuesto habitual">
-              <Dropdown
-                value={form.presupuesto}
-                onChange={(v) => set("presupuesto", v)}
-                placeholder="Sin definir"
-                options={withCurrent(PRESUPUESTO_BASE, form.presupuesto).map((p) => ({ value: p, label: p }))}
-              />
-            </Field>
-          </Row>
+          {/* Alicia 2026-09-19: "presupuesto habitual" no tiene que ver con dónde está el
+              proveedor -- se movió a la sección "Qué hace y qué recordar", junto a notas
+              internas. "Hasta dónde viaja" sí es de ubicación (cobertura geográfica), se queda. */}
+          <Field label="Hasta dónde viaja">
+            <Input
+              value={form.cobertura}
+              onChange={(e) => set("cobertura", e.target.value)}
+              placeholder="Nacional, regional, solo su ciudad…"
+            />
+          </Field>
           {/* Dirección y sitio web: campos reales del proveedor que el mockup no modela en su
               formulario (ahí solo hay país/departamento/ciudad/cobertura), pero sí existen en el
               backend -- se agregan al final de la sección en vez de quitarlos. */}
@@ -421,6 +402,8 @@ export function ProviderFormModal({
             </Field>
           </Row>
 
+          {/* Alicia 2026-09-19: teléfono y correo uno al lado del otro, no apilados. */}
+          <Row cols={2}>
           <Field label="Teléfono">
             <div className="flex flex-col gap-2">
               {form.telefonos.length > 0 && (
@@ -515,55 +498,24 @@ export function ProviderFormModal({
               </div>
             </div>
           </Field>
+          </Row>
         </FormDrawerSection>
 
-        <FormDrawerSection number="04" title="Qué hace y qué recordar">
-          {/* Chips de catálogo en vez del textarea de texto libre del mockup ("Sepáralos con
-              comas…"): `servicioIds` es una relación real contra el catálogo de servicios, no
-              texto suelto -- convertirlo a un textarea perdería esa relación (y filtrar/mostrar
-              el nombre del servicio en otras pantallas dejaría de funcionar). */}
-          <Field label="Servicios que presta">
-            <div className="flex flex-wrap gap-1.5">
-              {servicios.map((s) => {
-                const active = form.servicioIds.includes(s.id);
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => toggleServicio(s.id)}
-                    className={
-                      active
-                        ? "rounded-[20px] bg-text px-[9px] py-[3px] text-[11px] font-medium text-green"
-                        : "rounded-[20px] bg-gray-light px-[9px] py-[3px] text-[11px] font-medium text-text-2 hover:bg-border"
-                    }
-                  >
-                    {s.nombre}
-                  </button>
-                );
-              })}
-              {servicios.length === 0 && <span className="text-xs text-text-3">Sin servicios en el catálogo todavía.</span>}
-            </div>
-            <div className="mt-2 flex gap-2">
-              <Input
-                value={servicioDraft}
-                onChange={(e) => setServicioDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addServicioNuevo();
-                  }
-                }}
-                placeholder="Nuevo servicio (ej. Catering)"
-                className="flex-1"
-              />
-              <button
-                type="button"
-                onClick={addServicioNuevo}
-                className="flex h-[46px] flex-shrink-0 cursor-pointer items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] bg-teal-mid px-4 text-sm font-medium text-white transition-colors hover:bg-green hover:text-text"
-              >
-                + Agregar
-              </button>
-            </div>
+        <FormDrawerSection number="04" title="Qué recordar">
+          {/* Alicia 2026-09-19: "eso no son todos los servicios que presta este proveedor... eso
+              está mal, muchos proveedores están así -- quítalo" -- la lista de chips daba la
+              impresión de ser el catálogo completo de servicios de ese proveedor cuando en
+              realidad era lo que alguien alcanzó a marcar a mano; se quita del formulario (para
+              eso quedan las notas internas) y también de la ficha de detalle (ver
+              ProviderDetail.tsx). El dato (`servicioIds`) no se borra de lo ya guardado, solo deja
+              de editarse/mostrarse acá. */}
+          <Field label="Presupuesto habitual">
+            <Dropdown
+              value={form.presupuesto}
+              onChange={(v) => set("presupuesto", v)}
+              placeholder="Sin definir"
+              options={withCurrent(PRESUPUESTO_BASE, form.presupuesto).map((p) => ({ value: p, label: p }))}
+            />
           </Field>
           {/* Alicia 2026-09-09: "más espacio para las notas internas, es importante para todo,
               proveedor, clientes y proyectos" -- !min-h-[...] pisa el min-h-[72px] por defecto
@@ -572,7 +524,7 @@ export function ProviderFormModal({
             label="Notas internas"
             hint={
               <div className="mt-1.5 text-xs text-text-3">
-                Lo que el equipo debe saber antes de contratarlo: anticipos, tiempos, descuentos.
+                Lo que el equipo debe saber antes de contratarlo: anticipos, tiempos, descuentos, servicios que ofrece.
               </div>
             }
           >
@@ -581,14 +533,15 @@ export function ProviderFormModal({
         </FormDrawerSection>
 
         <FormDrawerSection number="05" title="Archivos y enlaces">
-          {/* Alicia 2026-09-09: "otra vez lo de archivos y enlaces, que esté en la parte ya de
-              una vez de registrar proveedor, no tengo que esperar a editarlo" -- mismo patrón de
-              Clientes/Proyectos: `handleSave` en page.tsx ya no cierra el drawer al crear. */}
-          {editing ? (
-            <EntityAttachments entityId={editing.id} api={proveedorAdjuntosApi} />
-          ) : (
-            <p className="text-sm text-text-3">Guarda el proveedor primero para poder subir archivos o agregar enlaces.</p>
-          )}
+          {/* Alicia 2026-09-10: apenas se abre el formulario ya se puede arrastrar un archivo o
+              agregar un link, sin esperar a darle "Registrar proveedor" -- ver PendingAttachment
+              en EntityAttachments.tsx. */}
+          <EntityAttachments
+            entityId={editing?.id ?? null}
+            api={proveedorAdjuntosApi}
+            pending={pendingAdjuntos}
+            onPendingChange={onPendingAdjuntosChange}
+          />
         </FormDrawerSection>
       </FormDrawerBody>
 

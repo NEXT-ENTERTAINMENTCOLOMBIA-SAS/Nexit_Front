@@ -29,7 +29,7 @@ import { solicitudesEliminacionApi } from "@/services/api/solicitudes-eliminacio
 import { usuariosApi } from "@/services/api/usuarios-service";
 import { useAuthStore } from "@/store/auth-store";
 import { useClientesStore } from "@/store/clientes-store";
-import { usePageToolbarStore } from "@/store/page-toolbar-store";
+import { usePageToolbarStore, type SearchSuggestion } from "@/store/page-toolbar-store";
 import { useProjectsStore } from "@/store/projects-store";
 import { useProvidersStore } from "@/store/providers-store";
 import { useUiStore } from "@/store/ui-store";
@@ -248,15 +248,58 @@ export default function UsuariosPage() {
       // Mismo lugar que "Nuevo proyecto" o "Nuevo cliente" en las otras pantallas. Admin/super_admin
       // pueden dar de alta a alguien (docs/06, ampliado 2026-09-09: ya no exclusivo de super_admin).
       ...(esAdmin ? { addLabel: "Nuevo usuario", addIcon: UserPlus, onAdd: () => setRegistrarOpen(true) } : {}),
+      // Buscador inteligente (2026-09-18, Alicia: "todos los buscadores... tienen que ser súper
+      // inteligentes") -- mismo patrón de sugerencias con ranking que Clientes/Proveedores/Proyectos.
+      getSuggestions: (query) => {
+        const q = query.toLowerCase();
+        return usuarios
+          .map((u) => {
+            const nombreCompleto = `${u.nombre} ${u.apellido}`.trim().toLowerCase();
+            const rolLabel = (ROL_LABELS[u.rol] ?? u.rol).toLowerCase();
+            const rank = nombreCompleto.startsWith(q)
+              ? 0
+              : nombreCompleto.includes(q)
+                ? 1
+                : [u.email, rolLabel].some((v) => v?.toLowerCase().includes(q))
+                  ? 2
+                  : -1;
+            return { u, rank };
+          })
+          .filter((x) => x.rank >= 0)
+          .sort((a, b) => a.rank - b.rank || a.u.nombre.localeCompare(b.u.nombre))
+          .slice(0, 8)
+          .map(({ u }): SearchSuggestion => ({
+            id: u.id,
+            label: `${u.nombre} ${u.apellido}`.trim(),
+            sublabel: [ROL_LABELS[u.rol] ?? u.rol, u.email].filter(Boolean).join(" · ") || undefined,
+          }));
+      },
+      onSelectSuggestion: (s) => {
+        const u = usuarios.find((x) => x.id === s.id);
+        if (u) setDetalle(u);
+      },
     });
     return clearToolbar;
-  }, [setToolbar, clearToolbar, esAdmin, load]);
+  }, [setToolbar, clearToolbar, esAdmin, load, usuarios]);
 
   const presenciaPorId = useMemo(() => new Map(presencia.map((p) => [p.id, p])), [presencia]);
 
   const invitacionesPendientes = useMemo(() => invitaciones.filter((i) => i.estado === "Pendiente"), [invitaciones]);
   const invitacionesVisibles = verInvitacionesRespondidas ? invitaciones : invitacionesPendientes;
   const solicitudesPorDecidir = useMemo(() => solicitudes.filter((s) => s.estado === "pendiente_admin"), [solicitudes]);
+  // Una vez resuelta (aprobada o rechazada), la solicitud se queda visible en la bandeja -- con su
+  // motivo y qué se decidió -- durante una semana, para que quede registro de qué se eliminó y por
+  // qué; pasado ese plazo ya no aporta y estorba (Alicia 2026-09-18). Las que siguen pendientes
+  // (esperando gerente o admin) se quedan siempre, sin importar cuándo se pidieron.
+  const solicitudesVisibles = useMemo(() => {
+    const UNA_SEMANA_MS = 7 * 24 * 60 * 60 * 1000;
+    const ahora = Date.now();
+    return solicitudes.filter((s) => {
+      if (s.estado !== "aprobada" && s.estado !== "rechazada") return true;
+      const resueltaEn = s.revisadoEn ?? s.createdAt;
+      return ahora - new Date(resueltaEn).getTime() < UNA_SEMANA_MS;
+    });
+  }, [solicitudes]);
 
   const stats = useMemo(
     () => ({
@@ -663,7 +706,7 @@ export default function UsuariosPage() {
           conteo={solicitudesPorDecidir.length}
         />
 
-        {solicitudes.length === 0 ? (
+        {solicitudesVisibles.length === 0 ? (
           <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-surface px-5 py-9 text-center">
             <ShieldQuestion size={24} strokeWidth={1.5} className="mx-auto mb-2 text-text-3" />
             <div className="text-[13px] text-text-2">Nadie ha pedido eliminar nada.</div>
@@ -681,7 +724,7 @@ export default function UsuariosPage() {
               <Th className="text-center">Acciones</Th>
             </Thead>
             <tbody>
-              {solicitudes.map((s) => {
+              {solicitudesVisibles.map((s) => {
                 const nombre = entidadNombre(s);
                 const estado = SOLICITUD_ESTADOS[s.estado] ?? { label: s.estado, bg: "var(--gray-light)", c: "var(--text-2)" };
                 const meToca = s.estado === "pendiente_admin";

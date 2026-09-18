@@ -23,11 +23,14 @@ import { useAuthStore } from "@/store/auth-store";
 import { useCatalogosStore } from "@/store/catalogos-store";
 import { useClientesStore } from "@/store/clientes-store";
 import { readFilterState, writeFilterState } from "@/lib/use-filter-state";
+import type { SearchSuggestion } from "@/store/page-toolbar-store";
 import { useGridColumns } from "@/lib/use-grid-columns";
 import { useProjectsStore } from "@/store/projects-store";
 import { usePageToolbarStore } from "@/store/page-toolbar-store";
 import { useUiStore } from "@/store/ui-store";
 import { clientesApi } from "@/services/api/clientes-service";
+import { clienteAdjuntosApi } from "@/services/api/cliente-adjuntos-service";
+import type { PendingAttachment } from "@/components/ui/EntityAttachments";
 import type { Cliente, ClienteInput } from "@/types/api";
 import { ClienteCard } from "./ClienteCard";
 import { ClienteFormModal } from "./ClienteFormModal";
@@ -66,6 +69,10 @@ export default function ClientesPage() {
   const [search, setSearch] = useState("");
   const [filtSector, setFiltSector] = useState("");
   const [filtEstado, setFiltEstado] = useState("");
+  // Filtro por proyecto (Alicia 2026-09-18): un cliente puede tener uno o varios proyectos
+  // asociados (Proyecto.clienteId) -- filtra la lista de clientes a los que tienen el
+  // proyecto elegido.
+  const [filtProyecto, setFiltProyecto] = useState("");
   const [view, setView] = useState<"cards" | "table">("cards");
   // Columnas de la grilla de tarjetas calculadas para llenar el ancho
   // disponible sin franja vacía, con o sin el riel expandido (Alicia
@@ -76,6 +83,7 @@ export default function ClientesPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Cliente | null>(null);
+  const [pendingAdjuntos, setPendingAdjuntos] = useState<PendingAttachment[]>([]);
   const [detailId, setDetailId] = useState<string | null>(null);
 
   // Autoguardado de filtros (Alicia 2026-09-07): restaura lo que había
@@ -86,6 +94,7 @@ export default function ClientesPage() {
       search: string;
       filtSector: string;
       filtEstado: string;
+      filtProyecto: string;
       view: "cards" | "table";
     }>("clientes");
     if (!saved) return;
@@ -93,6 +102,7 @@ export default function ClientesPage() {
     if (saved.search !== undefined) setSearch(saved.search);
     if (saved.filtSector !== undefined) setFiltSector(saved.filtSector);
     if (saved.filtEstado !== undefined) setFiltEstado(saved.filtEstado);
+    if (saved.filtProyecto !== undefined) setFiltProyecto(saved.filtProyecto);
     // Alicia 2026-09-08: NO restauramos `view` (Tarjetas/Tabla) desde la sesion
     // guardada. Esto era la causa real de "me aparece una tarjeta supergrande":
     // cada pantalla (Clientes/Proveedores/Proyectos) recordaba su propia vista
@@ -102,12 +112,12 @@ export default function ClientesPage() {
     // completo) se confundian con una tarjeta gigante rota. Los demas filtros
     // (busqueda, estado, etc.) SI se siguen restaurando; la vista simplemente
     // siempre arranca en "Tarjetas" para que las tres pantallas se vean iguales.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe correr una vez, al montar
+     
   }, []);
 
   useEffect(() => {
-    writeFilterState("clientes", { search, filtSector, filtEstado, view });
-  }, [search, filtSector, filtEstado, view]);
+    writeFilterState("clientes", { search, filtSector, filtEstado, filtProyecto, view });
+  }, [search, filtSector, filtEstado, filtProyecto, view]);
 
   useEffect(() => {
     function onGlobalSearch(event: Event) {
@@ -128,16 +138,44 @@ export default function ClientesPage() {
       addLabel: "Nuevo cliente",
       onAdd: () => {
         setEditing(null);
+        setPendingAdjuntos([]);
         setFormOpen(true);
       },
+      // Buscador más inteligente (Alicia 2026-09-18): sugerencias apenas se escribe, no solo
+      // filtrar la lista de abajo -- el nombre que empieza igual que lo escrito manda primero.
+      getSuggestions: (query) => {
+        const q = query.toLowerCase();
+        return clientes
+          .map((c) => {
+            const nombre = c.nombre?.toLowerCase() ?? "";
+            const rank = nombre.startsWith(q) ? 0 : nombre.includes(q) ? 1 : [c.sector, c.ciudad, c.contacto].some((v) => v?.toLowerCase().includes(q)) ? 2 : -1;
+            return { c, rank };
+          })
+          .filter((x) => x.rank >= 0)
+          .sort((a, b) => a.rank - b.rank || a.c.nombre.localeCompare(b.c.nombre))
+          .slice(0, 8)
+          .map(({ c }): SearchSuggestion => ({
+            id: c.id,
+            label: c.nombre,
+            sublabel: [c.sector, c.ciudad].filter(Boolean).join(" · ") || undefined,
+          }));
+      },
+      onSelectSuggestion: (s) => setDetailId(s.id),
     });
     return clearToolbar;
-  }, [clearToolbar, esAdmin, refresh, setToolbar]);
+  }, [clientes, clearToolbar, esAdmin, refresh, setToolbar]);
 
   const sectores = useMemo(
     () => [...new Set(clientes.map((c) => c.sector).filter((s): s is string => Boolean(s)))].sort(),
     [clientes],
   );
+
+  // Clientes que tienen el proyecto elegido asociado (Proyecto.clienteId) -- un proyecto sin
+  // clienteId no cuenta para ningún cliente.
+  const clienteIdsPorProyecto = useMemo(() => {
+    if (!filtProyecto) return null;
+    return new Set(proyectos.filter((p) => p.id === filtProyecto && p.clienteId).map((p) => p.clienteId as string));
+  }, [proyectos, filtProyecto]);
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
@@ -149,16 +187,17 @@ export default function ClientesPage() {
         );
       const matchesSector = !filtSector || c.sector === filtSector;
       const matchesEstado = !filtEstado || c.estado === filtEstado;
-      return matchesSearch && matchesSector && matchesEstado;
+      const matchesProyecto = !clienteIdsPorProyecto || clienteIdsPorProyecto.has(c.id);
+      return matchesSearch && matchesSector && matchesEstado && matchesProyecto;
     });
-  }, [clientes, search, filtSector, filtEstado]);
+  }, [clientes, search, filtSector, filtEstado, clienteIdsPorProyecto]);
 
   // Vuelve a la página 1 cada vez que cambia el resultado filtrado -- si no, quedarse en la
   // página 3 con un filtro que deja solo 1 resultado mostraría una lista vacía sin explicación.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset intencional al cambiar de filtro/vista, no una sincronización derivable sin efecto
     setPage(1);
-  }, [search, filtSector, filtEstado, view]);
+  }, [search, filtSector, filtEstado, filtProyecto, view]);
 
   const per = perPage === 0 ? Math.max(filtered.length, 1) : perPage;
   const totalPages = Math.max(1, Math.ceil(filtered.length / per));
@@ -174,22 +213,27 @@ export default function ClientesPage() {
     return { total, activos, prospectos, conProyectoActivo };
   }, [clientes, proyectos]);
 
+  const proyectoSeleccionado = filtProyecto ? proyectos.find((p) => p.id === filtProyecto) : undefined;
+
   const chips: FilterChip[] = [
     search && { key: "search", label: `“${search}”` },
     filtSector && { key: "sector", label: filtSector },
     filtEstado && { key: "estado", label: filtEstado },
+    proyectoSeleccionado && { key: "proyecto", label: proyectoSeleccionado.nombre },
   ].filter(Boolean) as FilterChip[];
 
   function removeChip(key: string) {
     if (key === "search") setSearch("");
     if (key === "sector") setFiltSector("");
     if (key === "estado") setFiltEstado("");
+    if (key === "proyecto") setFiltProyecto("");
   }
 
   function clearAll() {
     setSearch("");
     setFiltSector("");
     setFiltEstado("");
+    setFiltProyecto("");
   }
 
   async function handleSave(input: ClienteInput) {
@@ -201,11 +245,24 @@ export default function ClientesPage() {
         setEditing(null);
       } else {
         const creado = await addCliente(input);
+        // Sube/crea de verdad, uno por uno, los archivos y links que se hayan agregado
+        // ANTES de guardar (Alicia 2026-09-10: "apenas abro el formulario, me tenía que haber
+        // salido esto" -- ya no hay que esperar a que el cliente exista para empezar a
+        // adjuntar). Se hace ANTES de pasar a modo edición para que, cuando EntityAttachments
+        // cargue la lista real por primera vez, ya los encuentre ahí y no haya un parpadeo de
+        // "sin archivos ni links aún".
+        for (const p of pendingAdjuntos) {
+          try {
+            if (p.tipo === "link" && p.url) await clienteAdjuntosApi.crearLink(creado.id, { tipo: "link", nombre: p.nombre, url: p.url });
+            else if (p.file) await clienteAdjuntosApi.subirArchivo(creado.id, p.file);
+          } catch (err) {
+            pushToast(err instanceof Error ? err.message : `No se pudo subir "${p.nombre}"`, "danger");
+          }
+        }
+        setPendingAdjuntos([]);
         pushToast("Cliente agregado", "success");
-        // Se queda abierto, ahora editando al cliente recién creado -- Alicia 2026-09-09: la
-        // sección "Archivos y enlaces" necesita un id real (no existe hasta guardar), así que
-        // antes solo funcionaba al volver a abrir el cliente para editarlo. Pasando derecho a
-        // modo edición queda lista de una vez, sin ese paso extra.
+        // Se queda abierto, ahora editando al cliente recién creado -- así la sección de
+        // archivos/enlaces sigue usable (ahora en vivo) sin un paso extra de volver a abrirlo.
         setEditing(creado);
       }
     } catch (err) {
@@ -282,6 +339,12 @@ export default function ClientesPage() {
             placeholder="Toda industria"
             options={sectores.map((s) => ({ value: s, label: s }))}
           />
+          <Dropdown
+            value={filtProyecto}
+            onChange={setFiltProyecto}
+            placeholder="Cualquier proyecto"
+            options={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
+          />
         </div>
 
         <ActiveFilters chips={chips} onRemove={removeChip} onClearAll={clearAll} variant="panel" />
@@ -302,7 +365,15 @@ export default function ClientesPage() {
              mucho espacio muerto al lado cuando había pocos resultados. */}
           <div className="border-b border-border pb-3">{paginationBar}</div>
           {view === "cards" ? (
-            <div ref={cardsGridRef} className={styles.cardsGrid} style={{ gridTemplateColumns: `repeat(${cardsGridColumns}, minmax(0, 1fr))` }}>
+            <div
+              ref={cardsGridRef}
+              className={styles.cardsGrid}
+              // display/gap tambien en linea (no solo en dashboard.module.css): si el CSS de
+              // esta ruta todavia no llego cuando se pinta el primer frame despues del login,
+              // el contenedor no debe caer a bloque apilado de ancho completo mientras tanto
+              // (ver el comentario 2026-09-18 en use-grid-columns.ts).
+              style={{ display: "grid", gap: 12, gridTemplateColumns: `repeat(${cardsGridColumns}, minmax(0, 1fr))` }}
+            >
               {pageRows.map((c) => (
                 <ClienteCard
                   key={c.id}
@@ -386,10 +457,13 @@ export default function ClientesPage() {
         onClose={() => {
           setFormOpen(false);
           setEditing(null);
+          setPendingAdjuntos([]);
         }}
         onSave={handleSave}
         onDelete={() => editing && handleDelete(editing.id)}
         editing={editing}
+        pendingAdjuntos={pendingAdjuntos}
+        onPendingAdjuntosChange={setPendingAdjuntos}
       />
 
       <ClienteDetail
