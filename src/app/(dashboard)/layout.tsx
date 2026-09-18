@@ -291,10 +291,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               role="combobox"
               aria-expanded={suggestOpen && suggestions.length > 0}
               aria-autocomplete="list"
+              aria-controls="global-search-listbox"
             />
           </label>
           {suggestOpen && suggestions.length > 0 && (
             <div
+              id="global-search-listbox"
               role="listbox"
               className="absolute left-0 right-0 top-[calc(100%+6px)] z-40 overflow-hidden rounded-[var(--radius-lg)] border border-text bg-surface shadow-[0_16px_44px_rgba(12,12,12,0.18)]"
             >
@@ -303,6 +305,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   key={s.id}
                   type="button"
                   role="option"
+                  aria-selected={false}
                   onClick={() => handleSelectSuggestion(s)}
                   className="flex w-full flex-col gap-0.5 border-b border-[#EFEDE7] px-3.5 py-2.5 text-left transition-colors last:border-b-0 hover:bg-[#F4F3EF]"
                 >

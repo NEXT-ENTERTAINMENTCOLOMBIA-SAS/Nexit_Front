@@ -291,15 +291,20 @@ export default function UsuariosPage() {
   // motivo y qué se decidió -- durante una semana, para que quede registro de qué se eliminó y por
   // qué; pasado ese plazo ya no aporta y estorba (Alicia 2026-09-18). Las que siguen pendientes
   // (esperando gerente o admin) se quedan siempre, sin importar cuándo se pidieron.
+  // `Date.now()` es una llamada impura -- no puede ejecutarse directamente en el cuerpo del
+  // componente ni dentro de un useMemo (react-hooks/purity). El inicializador perezoso de
+  // useState sí está pensado para esto: corre una sola vez, al montar, y de ahí en adelante
+  // "ahora" queda fijo para esta sesión de la pantalla -- suficiente para la ventana de una
+  // semana, que no necesita recalcularse en cada render.
+  const [ahora] = useState(() => Date.now());
   const solicitudesVisibles = useMemo(() => {
     const UNA_SEMANA_MS = 7 * 24 * 60 * 60 * 1000;
-    const ahora = Date.now();
     return solicitudes.filter((s) => {
       if (s.estado !== "aprobada" && s.estado !== "rechazada") return true;
       const resueltaEn = s.revisadoEn ?? s.createdAt;
       return ahora - new Date(resueltaEn).getTime() < UNA_SEMANA_MS;
     });
-  }, [solicitudes]);
+  }, [solicitudes, ahora]);
 
   const stats = useMemo(
     () => ({
