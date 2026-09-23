@@ -19,7 +19,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NEXIT · Next Marketing Experiencial",
+  title: "Nexit · Portal interno",
   description: "Gestión de proveedores y proyectos para Next Marketing Experiencial",
 };
 
