@@ -12,7 +12,12 @@ import tsconfigPaths from "vite-tsconfig-paths";
 export default defineConfig({
   plugins: [tsconfigPaths(), react()],
   test: {
-    environment: "jsdom",
+    // "node" por defecto: ninguna prueba actual toca el DOM (fetch, Blob, File y
+    // FormData ya vienen en Node 22). Cargar jsdom en cada worker era lo que en
+    // Windows (antivirus escaneando node_modules) hacía pasar los 60 s de arranque
+    // y daba "Timeout waiting for worker to respond". Si una prueba de componente
+    // necesita DOM, poner arriba del archivo: // @vitest-environment jsdom
+    environment: "node",
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
     exclude: ["e2e/**", "node_modules/**"],
