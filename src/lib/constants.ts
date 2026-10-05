@@ -21,7 +21,7 @@ export const AVATAR_COLORS: { bg: string; text: string }[] = [
 ];
 
 /**
- * Los `estado` reales (proveedor.estado, EstadoProyecto.nombre, estadoBrief) son
+ * Los `estado` reales (proveedor.estado, EstadoProyecto.nombre) son
  * `string` simples que vienen del backend -- catálogo dinámico en el caso de
  * proyecto, convención de texto libre en los otros dos -- no un union de TS
  * fijo como en la maqueta original. Por eso estos tres mapas quedan `Record<string, ...>`
@@ -62,13 +62,6 @@ export const PROJECT_STATUS_COLORS: Record<string, { bg: string; c: string }> = 
   Cancelado: { bg: "#FCEBEB", c: "#791F1F" },
   "Ejecutado, pendiente facturar": { bg: "#FAEEDA", c: "#633806" },
   Facturado: { bg: "#EAF3DE", c: "#173404" },
-};
-
-export const BRIEF_STATUS_COLORS: Record<string, { bg: string; c: string }> = {
-  "Pendiente por enviar": { bg: "#F1EFE8", c: "#444441" },
-  "Entregado, a espera de respuesta": { bg: "#FAEEDA", c: "#633806" },
-  "Requiere ajustes": { bg: "#FCEBEB", c: "#791F1F" },
-  Aprobado: { bg: "#EAF3DE", c: "#27500A" },
 };
 
 /** Área de una entrada de la bitácora de seguimiento de un proyecto (Alicia 2026-09-18: "hazla

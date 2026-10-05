@@ -16,7 +16,7 @@ import {
 import { EntityAttachments } from "@/components/ui/EntityAttachments";
 import { HistorialTimeline } from "@/components/ui/HistorialTimeline";
 import { Textarea } from "@/components/ui/form";
-import { AREA_SEGUIMIENTO_COLORS, BRIEF_STATUS_COLORS, PROJECT_STATUS_COLORS, PROVIDER_STATUS_COLORS, statusColor } from "@/lib/constants";
+import { AREA_SEGUIMIENTO_COLORS, PROJECT_STATUS_COLORS, PROVIDER_STATUS_COLORS, statusColor } from "@/lib/constants";
 import { fmtDateLong } from "@/lib/format";
 import { historialApi } from "@/services/api/historial-service";
 import { proyectoAdjuntosApi } from "@/services/api/proyecto-adjuntos-service";
@@ -119,7 +119,6 @@ export function ProjectDetail({
   const estadoNombre = estadosProyecto.find((e) => e.id === project.estadoId)?.nombre ?? "—";
   const cliente = clientes.find((c) => c.id === project.clienteId) ?? null;
   const st = statusColor(PROJECT_STATUS_COLORS, estadoNombre);
-  const bst = statusColor(BRIEF_STATUS_COLORS, project.estadoBrief);
   const assigned = project.proveedorIds.map((id) => providers.find((p) => p.id === id)).filter((p): p is Proveedor => Boolean(p));
   const primerTelefono = cliente?.telefonos[0]?.telefono;
   const whatsappHref = primerTelefono ? `https://wa.me/${primerTelefono.replace(/[^\d]/g, "")}` : null;
@@ -154,9 +153,6 @@ export function ProjectDetail({
           <Badge bg={st.bg} color={st.c}>
             {estadoNombre}
           </Badge>
-          <Badge bg={bst.bg} color={bst.c}>
-            Brief: {project.estadoBrief}
-          </Badge>
           <Badge bg="#F1EFE8" color="#0C0C0C">
             {fechaEventoLabel}
           </Badge>
@@ -184,7 +180,7 @@ export function ProjectDetail({
         </DetailBox>
 
         <DetailBox title="Equipo">
-          <DetailRow k="Líder de equipo" v={gerenteNombre || "—"} />
+          <DetailRow k="Project Manager" v={gerenteNombre || "—"} />
           <DetailRow k="Persona de contacto" v={project.contactoProyecto || "—"} />
           {project.equipo.length === 0 ? (
             <DetailRow k="Miembros" v="—" />
@@ -229,7 +225,7 @@ export function ProjectDetail({
           <EntityAttachments entityId={project.id} api={proyectoAdjuntosApi} />
         </DetailBox>
 
-        <DetailBox title="Bitácora de seguimiento" tone="plain">
+        <DetailBox title="Nota interna" tone="plain">
           <Bitacora proyectoId={project.id} />
         </DetailBox>
 
@@ -296,7 +292,7 @@ function Bitacora({ proyectoId }: { proyectoId: string }) {
       const creada = await proyectosApi.agregarSeguimiento(proyectoId, { area, nota: nota.trim() });
       setEntradas((prev) => [creada, ...prev]);
       setNota("");
-      pushToast("Entrada agregada a la bitácora", "success");
+      pushToast("Nota interna agregada", "success");
     } catch (err) {
       pushToast(err instanceof Error ? err.message : "No se pudo agregar la entrada", "danger");
     } finally {
@@ -308,7 +304,7 @@ function Bitacora({ proyectoId }: { proyectoId: string }) {
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-border bg-bg p-3">
         <Dropdown value={area} onChange={(v) => setArea(v || AREAS_SEGUIMIENTO[0])} placeholder="Área" options={AREAS_SEGUIMIENTO.map((a) => ({ value: a, label: a }))} />
-        <Textarea value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Nueva nota para la bitácora…" className="!bg-surface" />
+        <Textarea value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Nueva nota interna…" className="!bg-surface" />
         <button
           type="button"
           disabled={saving || !nota.trim()}
@@ -316,14 +312,14 @@ function Bitacora({ proyectoId }: { proyectoId: string }) {
           className="flex h-9 w-fit cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-md)] bg-teal-mid px-3 text-[13px] font-medium text-white transition-colors hover:bg-green hover:text-text disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Plus size={14} strokeWidth={2} />
-          {saving ? "Guardando…" : "Agregar entrada"}
+          {saving ? "Guardando…" : "Agregar nota"}
         </button>
       </div>
 
       {loading ? (
-        <div className="py-1 text-sm text-text-3">Cargando bitácora…</div>
+        <div className="py-1 text-sm text-text-3">Cargando notas internas…</div>
       ) : entradas.length === 0 ? (
-        <div className="py-1 text-sm text-text-3">Todavía no hay notas de seguimiento.</div>
+        <div className="py-1 text-sm text-text-3">Todavía no hay notas internas.</div>
       ) : (
         // Alicia 2026-09-18: "hazla más útil... y más bonita" -- cada entrada en su propia
         // tarjetita con el área como badge de color (en vez de texto plano), así se distingue de

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -o '.\\\\{600\\\\}kTotal }}' /tmp/mockup.html | head -c 1500)",
+      "Read(//tmp/**)",
+      "Bash(grep -o 'Total de proveedores.\\\\{0,2000\\\\}' /tmp/mockup.html | head -c 2500)",
+      "Bash(grep -o 'searchPlaceholder.\\\\{0,3000\\\\}' /tmp/mockup.html | head -c 1 >/dev/null *)",
+      "Bash(grep -o 'Registrar proveedor.\\\\{0,200\\\\}\\\\|Nuevo proveedor.\\\\{0,200\\\\}\\\\|proveedor.\\\\{0,3}Datos del.\\\\{0,200\\\\}' /tmp/mockup.html | head -20)",
+      "Bash(grep -oE 'Registrar proveedor.{0,200}' /tmp/mockup.html | head -5 *)",
+      "Bash(grep -oE \"formFieldsProv.{0,50}|fieldsProv.{0,50}|campos.{0,10}[Pp]rov.{0,50}\" /tmp/mockup.html | head -20 *)"
+    ]
+  }
+}

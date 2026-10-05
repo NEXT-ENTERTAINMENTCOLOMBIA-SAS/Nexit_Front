@@ -1,18 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { BarChart3, Bookmark, Building2, Download, FileWarning, Folders, Truck } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { BarChart3, Bookmark, Building2, Download, FileWarning, Folders, Truck, UserRound } from "lucide-react";
 import { Button, StatCard, TabButton, TabsShell } from "@/components/ui/primitives";
 import { Spinner } from "@/components/ui/Spinner";
 import { Input } from "@/components/ui/form";
-import { BRIEF_STATUS_COLORS, PROJECT_STATUS_COLORS, statusColor } from "@/lib/constants";
+import { PROJECT_STATUS_COLORS, statusColor } from "@/lib/constants";
 import { downloadBlob } from "@/lib/download-file";
 import { periodKey, previousPeriodDate, type InformeMode } from "@/lib/informe";
 import { ApiError } from "@/lib/api-client";
 import { informesApi } from "@/services/api/informes-service";
+import { usuariosApi } from "@/services/api/usuarios-service";
+import { useCatalogosStore } from "@/store/catalogos-store";
+import { useClientesStore } from "@/store/clientes-store";
+import { useProjectsStore } from "@/store/projects-store";
 import { useAuthStore } from "@/store/auth-store";
 import { useUiStore } from "@/store/ui-store";
-import type { InformeResumen } from "@/types/api";
+import type { InformeResumen, Usuario } from "@/types/api";
 import styles from "@/styles/dashboard.module.css";
 
 /** Paleta fija del dona -- ported del mockup aprobado (donutColors): a diferencia de las
@@ -48,6 +52,42 @@ export default function InformePage() {
   // puntual por tipo+periodo (ver informesApi.snapshot). El mockup aprobado hace lo mismo:
   // "Informes guardados" ahí tampoco sobrevive a un refresh, solo crece durante la sesión.
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
+
+  // Project Managers -> proyectos -> clientes. Se arma en el front con lo que ya existe
+  // (proyectos, clientes y usuarios); no necesita un endpoint nuevo.
+  const { items: proyectos, fetchAll: fetchProyectos } = useProjectsStore();
+  const { items: clientes, fetchAll: fetchClientes } = useClientesStore();
+  const { estadosProyecto, fetchBase } = useCatalogosStore();
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+
+  useEffect(() => {
+    if (!puedeVer) return;
+    fetchProyectos();
+    fetchClientes();
+    fetchBase();
+    usuariosApi.list().then(setUsuarios).catch(() => setUsuarios([]));
+  }, [puedeVer, fetchProyectos, fetchClientes, fetchBase]);
+
+  const pmGroups = useMemo(() => {
+    const nombreUsuario = new Map(usuarios.map((u) => [u.id, `${u.nombre} ${u.apellido}`.trim()]));
+    const nombreCliente = new Map(clientes.map((c) => [c.id, c.nombre]));
+    const nombreEstado = new Map(estadosProyecto.map((e) => [e.id, e.nombre]));
+    const groups = new Map<string, { key: string; pm: string; proyectos: { id: string; nombre: string; cliente: string; estado: string }[] }>();
+    for (const p of proyectos) {
+      const key = p.gerenteId ?? "sin-pm";
+      const pm = p.gerenteId ? (nombreUsuario.get(p.gerenteId) ?? "Project Manager") : "Sin Project Manager";
+      if (!groups.has(key)) groups.set(key, { key, pm, proyectos: [] });
+      groups.get(key)!.proyectos.push({
+        id: p.id,
+        nombre: p.nombre || "(Sin nombre)",
+        cliente: (p.clienteId && nombreCliente.get(p.clienteId)) || "Sin cliente",
+        estado: nombreEstado.get(p.estadoId) ?? "—",
+      });
+    }
+    return [...groups.values()]
+      .map((g) => ({ ...g, clientes: [...new Set(g.proyectos.map((x) => x.cliente))] }))
+      .sort((a, b) => (a.key === "sin-pm" ? 1 : b.key === "sin-pm" ? -1 : a.pm.localeCompare(b.pm, "es")));
+  }, [proyectos, clientes, usuarios, estadosProyecto]);
 
   const loadResumen = useCallback(async () => {
     setLoading(true);
@@ -145,10 +185,10 @@ export default function InformePage() {
     );
   }
 
-  // Orden fijo (el de PROJECT_STATUS_COLORS/BRIEF_STATUS_COLORS, igual que Object.keys(PROJ_STATUS_COLORS)
+  // Orden fijo (el de PROJECT_STATUS_COLORS, igual que Object.keys(PROJ_STATUS_COLORS)
   // en el mockup aprobado) en vez del orden que traiga el objeto del backend -- así la lista sale
   // siempre en el mismo orden y muestra también los estados en 0, no solo los que tienen datos.
-  // Los estados/briefs reales que el backend traiga y no estén en este mapa fijo (los catálogos
+  // Los estados reales que el backend traiga y no estén en este mapa fijo (los catálogos
   // son dinámicos, así que puede pasar) se agregan al final -- nunca se pierden datos reales.
   const orderedKeys = (fixedOrder: string[], real: Record<string, number>) => [
     ...fixedOrder,
@@ -159,13 +199,6 @@ export default function InformePage() {
         label,
         count: current.porEstado[label] ?? 0,
         ...statusColor(PROJECT_STATUS_COLORS, label),
-      }))
-    : [];
-  const briefRows = current
-    ? orderedKeys(Object.keys(BRIEF_STATUS_COLORS), current.porBrief).map((label) => ({
-        label,
-        count: current.porBrief[label] ?? 0,
-        ...statusColor(BRIEF_STATUS_COLORS, label),
       }))
     : [];
   const donutTotal = Math.max(1, estadoRows.reduce((a, r) => a + r.count, 0));
@@ -182,7 +215,6 @@ export default function InformePage() {
     ? `conic-gradient(${donutSegs.map((g) => `${g.color} ${g.start}deg ${g.end}deg`).join(",")})`
     : "#EFEDE7";
   const estadoMax = Math.max(1, ...estadoRows.map((r) => r.count), 1);
-  const briefMax = Math.max(1, ...briefRows.map((r) => r.count), 1);
 
   return (
     <div>
@@ -293,29 +325,46 @@ export default function InformePage() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
 
-              <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-4.5 shadow-[0_1px_3px_rgba(12,12,12,.04)] transition-shadow hover:shadow-[0_2px_10px_rgba(12,12,12,.07)]">
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="text-sm font-semibold">Por estado del brief</div>
-                  <span className="font-mono text-[11px] text-text-3">{briefRows.reduce((a, r) => a + r.count, 0)} total</span>
-                </div>
-                {briefRows.length === 0 && <p className="text-sm text-text-3">Sin datos todavía.</p>}
-                {briefRows.map((r) => (
-                  <div key={r.label} className="mb-3 last:mb-0">
-                    <div className="mb-1.5 flex items-center justify-between text-[12.5px]">
-                      <span className="text-text-2">{r.label}</span>
-                      <span className="font-semibold">{r.count}</span>
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-base font-semibold">Project Managers</div>
+                <div className="mt-0.5 text-[11.5px] text-text-3">Qué proyectos y qué clientes tiene cada Project Manager.</div>
+              </div>
+              <span className="font-mono text-[11px] text-text-3">{pmGroups.length} {pmGroups.length === 1 ? "grupo" : "grupos"}</span>
+            </div>
+            {pmGroups.length === 0 ? (
+              <p className="text-sm text-text-3">Sin proyectos todavía.</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
+                {pmGroups.map((g) => (
+                  <div key={g.key} className="rounded-[var(--radius-lg)] border border-border bg-surface p-4.5 shadow-[0_1px_3px_rgba(12,12,12,.04)]">
+                    <div className="mb-3 flex items-center gap-3">
+                      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gray-light text-text-2">
+                        <UserRound size={17} strokeWidth={1.7} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold">{g.pm}</div>
+                        <div className="mt-0.5 text-[11.5px] text-text-3">
+                          {g.proyectos.length} {g.proyectos.length === 1 ? "proyecto" : "proyectos"} · {g.clientes.length} {g.clientes.length === 1 ? "cliente" : "clientes"}
+                        </div>
+                      </div>
                     </div>
-                    <div className="h-[7px] overflow-hidden rounded-[20px] bg-[#EFEDE7]">
-                      <div
-                        className="h-full rounded-[20px] transition-[width] duration-300"
-                        style={{ width: `${Math.round((r.count / briefMax) * 100)}%`, background: r.c }}
-                      />
+                    <div className="flex flex-col">
+                      {g.proyectos.map((p) => (
+                        <div key={p.id} className="flex items-center gap-2 border-t border-[#EFEDE7] py-2 text-[13px]">
+                          <span className="min-w-0 flex-1 truncate font-medium">{p.nombre}</span>
+                          <span className="min-w-0 max-w-[45%] flex-shrink-0 truncate text-text-2">{p.cliente}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            )}
           </div>
 
           {savedReports.length > 0 && (

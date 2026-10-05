@@ -188,7 +188,6 @@ export interface ProyectoInput {
   fechaEvento?: string | null;
   estadoId: string;
   porcentajeAvance: number;
-  estadoBrief: string;
   propuestaEstado: string;
   numeroFactura?: string | null;
   pagado: boolean;
@@ -258,7 +257,6 @@ export interface InformeResumen {
   totalProyectos: number;
   proyectosSinProveedor: number;
   porEstado: Record<string, number>;
-  porBrief: Record<string, number>;
 }
 
 export interface InformeSnapshot extends InformeResumen {
