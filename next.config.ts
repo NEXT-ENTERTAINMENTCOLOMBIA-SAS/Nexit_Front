@@ -72,6 +72,10 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
   },
+  // /informe desapareció (2026-10-05): lo reemplaza /project-managers. Redirige los enlaces guardados.
+  async redirects() {
+    return [{ source: "/informe", destination: "/project-managers", permanent: true }];
+  },
   async headers() {
     return [
       {

@@ -1,4 +1,4 @@
-/** Dispara la descarga de un Blob en el navegador (ej. el .xlsx que devuelve informesApi.exportarResumen). */
+/** Dispara la descarga de un Blob en el navegador (ej. un .xlsx exportado). */
 export function downloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");

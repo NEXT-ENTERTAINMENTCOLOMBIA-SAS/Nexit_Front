@@ -7,7 +7,7 @@ import { test, expect } from "@playwright/test";
  * proxy; acá queda como prueba repetible.
  */
 
-const RUTAS_PROTEGIDAS = ["/proveedores", "/clientes", "/calendario", "/informe", "/proyectos", "/usuarios", "/"];
+const RUTAS_PROTEGIDAS = ["/proveedores", "/clientes", "/calendario", "/project-managers", "/proyectos", "/usuarios", "/"];
 
 for (const ruta of RUTAS_PROTEGIDAS) {
   test(`sin sesión: ${ruta} redirige a /login`, async ({ page }) => {

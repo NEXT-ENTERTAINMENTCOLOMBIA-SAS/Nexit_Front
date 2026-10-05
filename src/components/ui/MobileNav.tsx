@@ -13,7 +13,7 @@ import styles from "@/styles/shell.module.css";
 /**
  * Barra de navegación inferior fija de móvil (< 1000px) -- reemplaza al
  * riel lateral cuando este desaparece (ver src/styles/shell.module.css).
- * Muestra los primeros 3 accesos y agrupa el resto ("Informes", "Usuarios")
+ * Muestra los primeros 3 accesos y agrupa el resto ("Project Managers", "Usuarios")
  * más la cuenta/cerrar sesión detrás de "Más", igual que el
  * <nav class="nx-mobile"> del HTML aprobado (Clientes / Proyectos /
  * Proveedores / Más).

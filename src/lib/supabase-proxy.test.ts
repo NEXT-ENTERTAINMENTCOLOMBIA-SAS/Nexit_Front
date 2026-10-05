@@ -56,8 +56,8 @@ describe("updateSession -- sin sesión (anónimo)", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
-  it("no bloquea todas las rutas protegidas conocidas (clientes, informe, proyectos, usuarios)", async () => {
-    for (const path of ["/clientes", "/informe", "/proyectos", "/usuarios"]) {
+  it("no bloquea todas las rutas protegidas conocidas (clientes, project managers, proyectos, usuarios)", async () => {
+    for (const path of ["/clientes", "/project-managers", "/proyectos", "/usuarios"]) {
       const res = await updateSession(makeRequest(path));
       expect(new URL(res.headers.get("location")!).pathname, `path ${path}`).toBe("/login");
     }
