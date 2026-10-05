@@ -20,6 +20,7 @@ import { RowAction, Table, Td, Th, Thead, Tr } from "@/components/ui/Table";
 import { PROJECT_STATUS_COLORS, statusColor } from "@/lib/constants";
 import { fmtDateShort } from "@/lib/format";
 import { useAuthStore } from "@/store/auth-store";
+import { usuariosApi } from "@/services/api/usuarios-service";
 import { useCatalogosStore } from "@/store/catalogos-store";
 import { useClientesStore } from "@/store/clientes-store";
 import { useProjectsStore } from "@/store/projects-store";
@@ -69,6 +70,9 @@ export default function ProyectosPage() {
   const [filtClienteId, setFiltClienteId] = useState("");
   // Filtro por tipo de proyecto (Alicia 2026-09-18): "Corporativo" o "Evento social".
   const [filtTipo, setFiltTipo] = useState("");
+  // Project Manager (2026-10-05): el gerente del proyecto.
+  const [filtPm, setFiltPm] = useState("");
+  const [nombresPm, setNombresPm] = useState<Record<string, string>>({});
   const [view, setView] = useState<"cards" | "table">("cards");
   // Columnas de la grilla de tarjetas calculadas para llenar el ancho
   // disponible sin franja vacía, con o sin el riel expandido (Alicia
@@ -91,6 +95,7 @@ export default function ProyectosPage() {
       filtEstadoId: string;
       filtClienteId: string;
       filtTipo: string;
+      filtPm: string;
       view: "cards" | "table";
     }>("proyectos");
     if (!saved) return;
@@ -99,6 +104,7 @@ export default function ProyectosPage() {
     if (saved.filtEstadoId !== undefined) setFiltEstadoId(saved.filtEstadoId);
     if (saved.filtClienteId !== undefined) setFiltClienteId(saved.filtClienteId);
     if (saved.filtTipo !== undefined) setFiltTipo(saved.filtTipo);
+    if (saved.filtPm !== undefined) setFiltPm(saved.filtPm);
     // Alicia 2026-09-08: NO restauramos `view` (Tarjetas/Tabla) desde la sesion
     // guardada. Esto era la causa real de "me aparece una tarjeta supergrande":
     // cada pantalla (Clientes/Proveedores/Proyectos) recordaba su propia vista
@@ -112,8 +118,8 @@ export default function ProyectosPage() {
   }, []);
 
   useEffect(() => {
-    writeFilterState("proyectos", { search, filtEstadoId, filtClienteId, filtTipo, view });
-  }, [search, filtEstadoId, filtClienteId, filtTipo, view]);
+    writeFilterState("proyectos", { search, filtEstadoId, filtClienteId, filtTipo, filtPm, view });
+  }, [search, filtEstadoId, filtClienteId, filtTipo, filtPm, view]);
 
   useEffect(() => {
     const openId = searchParams.get("open");
@@ -197,15 +203,16 @@ export default function ProyectosPage() {
       const matchesEstado = !filtEstadoId || p.estadoId === filtEstadoId;
       const matchesCliente = !filtClienteId || p.clienteId === filtClienteId;
       const matchesTipo = !filtTipo || p.tipoProyecto === filtTipo;
-      return matchesSearch && matchesEstado && matchesCliente && matchesTipo;
+      const matchesPm = !filtPm || p.gerenteId === filtPm;
+      return matchesSearch && matchesEstado && matchesCliente && matchesTipo && matchesPm;
     });
-  }, [projects, clientes, search, filtEstadoId, filtClienteId, filtTipo]);
+  }, [projects, clientes, search, filtEstadoId, filtClienteId, filtTipo, filtPm]);
 
   // Vuelve a la página 1 cada vez que cambia el resultado filtrado.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset intencional al cambiar de filtro/vista, no una sincronización derivable sin efecto
     setPage(1);
-  }, [search, filtEstadoId, filtClienteId, filtTipo, view]);
+  }, [search, filtEstadoId, filtClienteId, filtTipo, filtPm, view]);
 
   const per = perPage === 0 ? Math.max(filtered.length, 1) : perPage;
   const totalPages = Math.max(1, Math.ceil(filtered.length / per));
@@ -228,11 +235,30 @@ export default function ProyectosPage() {
     return { total, enCurso, sinProveedores, proximos };
   }, [projects, estadosProyecto]);
 
+  // Nombres de los Project Managers: admin/super_admin ven el directorio completo; el resto, la lista de equipo.
+  useEffect(() => {
+    let vivo = true;
+    (esAdmin ? usuariosApi.list() : usuariosApi.equipo())
+      .then((us) => {
+        if (vivo) setNombresPm(Object.fromEntries(us.map((u) => [u.id, `${u.nombre} ${u.apellido}`.trim()])));
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [esAdmin]);
+
+  const opcionesPm = useMemo(() => {
+    const ids = [...new Set(projects.map((p) => p.gerenteId).filter((id): id is string => Boolean(id)))];
+    return ids.map((id) => ({ value: id, label: nombresPm[id] ?? "Project Manager" })).sort((a, b) => a.label.localeCompare(b.label, "es"));
+  }, [projects, nombresPm]);
+
   const chips: FilterChip[] = [
     search && { key: "search", label: `“${search}”` },
     filtEstadoId && { key: "estado", label: estadosProyecto.find((e) => e.id === filtEstadoId)?.nombre ?? "" },
     filtClienteId && { key: "cliente", label: clientes.find((c) => c.id === filtClienteId)?.nombre ?? "" },
     filtTipo && { key: "tipo", label: filtTipo },
+    filtPm && { key: "pm", label: `PM: ${nombresPm[filtPm] ?? "Project Manager"}` },
   ].filter(Boolean) as FilterChip[];
 
   function removeChip(key: string) {
@@ -240,6 +266,7 @@ export default function ProyectosPage() {
     if (key === "estado") setFiltEstadoId("");
     if (key === "cliente") setFiltClienteId("");
     if (key === "tipo") setFiltTipo("");
+    if (key === "pm") setFiltPm("");
   }
 
   function clearAll() {
@@ -247,6 +274,7 @@ export default function ProyectosPage() {
     setFiltEstadoId("");
     setFiltClienteId("");
     setFiltTipo("");
+    setFiltPm("");
   }
 
   async function handleSave(input: ProyectoInput) {
@@ -351,6 +379,7 @@ export default function ProyectosPage() {
             placeholder="Cualquier tipo"
             options={tiposProyecto.map((t) => ({ value: t, label: t }))}
           />
+          <Dropdown value={filtPm} onChange={setFiltPm} placeholder="Cualquier Project Manager" options={opcionesPm} />
         </div>
 
         <ActiveFilters chips={chips} onRemove={removeChip} onClearAll={clearAll} variant="panel" />

@@ -14,6 +14,7 @@ import {
   DrawerIconButton,
 } from "@/components/ui/Drawer";
 import { EntityAttachments } from "@/components/ui/EntityAttachments";
+import { NotasInternasCliente } from "@/components/ui/NotasInternas";
 import { HistorialTimeline } from "@/components/ui/HistorialTimeline";
 import { CLIENT_STATUS_COLORS, statusColor } from "@/lib/constants";
 import { clienteAdjuntosApi } from "@/services/api/cliente-adjuntos-service";
@@ -236,10 +237,14 @@ export function ClienteDetail({
           />
         </DetailBox>
 
-        <DetailBox title="Notas internas">
+        <DetailBox title="Notas generales">
           <p className="border-l-2 border-green pl-3 text-sm leading-relaxed text-text-2">
             {cliente.notas || "Sin notas registradas."}
           </p>
+        </DetailBox>
+
+        <DetailBox title="Nota interna" tone="plain">
+          <NotasInternasCliente clienteId={cliente.id} />
         </DetailBox>
 
         <DetailBox title="Archivos y enlaces" tone="plain">

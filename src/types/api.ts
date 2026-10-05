@@ -639,3 +639,20 @@ export interface ImportarResultado {
   actualizados: number;
   errores: ImportarError[];
 }
+
+// ---------------------------------------------------------------------------
+// Notas internas de cliente (2026-10-05)
+// ---------------------------------------------------------------------------
+
+export interface ClienteNotaInput {
+  area: string;
+  nota: string;
+}
+
+export interface ClienteNota extends ClienteNotaInput {
+  id: string;
+  autorId?: string | null;
+  /** Quién la escribió (null si esa cuenta ya no existe). */
+  autorNombre?: string | null;
+  fecha: string;
+}

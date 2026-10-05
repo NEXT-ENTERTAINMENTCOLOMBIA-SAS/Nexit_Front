@@ -130,7 +130,10 @@ export default function ProjectManagersPage() {
   const pushToast = useUiStore((s) => s.pushToast);
   const proveedores = useProvidersStore((s) => s.items);
   const fetchProveedores = useProvidersStore((s) => s.fetchAll);
-  const puedeVer = user?.rol === "admin" || user?.rol === "super_admin";
+  // Lo ve cualquier usuario (2026-10-05): admin/super_admin ven a todos los Project Managers; el resto,
+  // solo los proyectos que tiene a su cargo (el backend ya filtra).
+  const esAdmin = user?.rol === "admin" || user?.rol === "super_admin";
+  const puedeVer = Boolean(user);
 
   const [panel, setPanel] = useState<PanelPm | null>(null);
   const [loading, setLoading] = useState(true);
@@ -160,7 +163,7 @@ export default function ProjectManagersPage() {
     return (
       <div className="flex flex-col items-center gap-2 py-20 text-center text-text-2">
         <UserRound size={28} strokeWidth={1.5} className="text-text-3" />
-        <div className="text-[13px]">Este panel está disponible solo para administradores.</div>
+        <div className="text-[13px]">Inicia sesión para ver este panel.</div>
       </div>
     );
   }
@@ -170,7 +173,7 @@ export default function ProjectManagersPage() {
   return (
     <div>
       <div className="mb-1 font-mono text-[11px] uppercase tracking-widest text-text-3">Equipo</div>
-      <h1 className={styles.h1}>Project Managers</h1>
+      <h1 className={styles.h1}>{esAdmin ? "Project Managers" : "Mis proyectos"}</h1>
 
       {loading && !panel ? (
         <div className="flex justify-center py-14 text-text-2">
@@ -181,10 +184,14 @@ export default function ProjectManagersPage() {
       ) : panel ? (
         <div className="mt-5 flex flex-col gap-5">
           <div className={styles.kpis}>
-            <StatCard n={panel.resumen.projectManagersConProyectos} label="Project Managers" icon={UserRound} accent="#0C0C0C" />
-            <StatCard n={panel.resumen.totalProyectos} label="Proyectos" icon={Folders} accent="#0C0C0C" />
+            {esAdmin ? (
+              <StatCard n={panel.resumen.projectManagersConProyectos} label="Project Managers" icon={UserRound} accent="#0C0C0C" />
+            ) : (
+              <StatCard n={panel.resumen.totalProyectos} label="Mis proyectos" icon={Folders} accent="#0C0C0C" />
+            )}
+            {esAdmin && <StatCard n={panel.resumen.totalProyectos} label="Proyectos" icon={Folders} accent="#0C0C0C" />}
             <StatCard n={panel.resumen.clientesActivos} label="Clientes" icon={Building2} accent="#036B3C" />
-            <StatCard n={proveedores.length} label="Proveedores" icon={Truck} accent="#7A4E00" />
+            <StatCard n={esAdmin ? proveedores.length : panel.resumen.proveedoresActivos} label="Proveedores" icon={Truck} accent="#7A4E00" />
           </div>
 
           <section className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface shadow-[0_1px_3px_rgba(12,12,12,.04)]">
