@@ -248,27 +248,93 @@ export interface SeguimientoProyecto extends SeguimientoProyectoInput {
 }
 
 // ---------------------------------------------------------------------------
-// Informes (solo admin/super_admin)
+// Panel de Project Managers (solo admin/super_admin) -- reemplaza a Informes (2026-10-05)
 // ---------------------------------------------------------------------------
 
-export interface InformeResumen {
-  totalProveedores: number;
-  totalClientes: number;
+export interface PanelPmResumen {
+  projectManagersConProyectos: number;
+  projectManagersSinProyectos: number;
   totalProyectos: number;
-  proyectosSinProveedor: number;
-  porEstado: Record<string, number>;
+  proyectosSinProjectManager: number;
+  personasEnProyectos: number;
+  clientesActivos: number;
+  proveedoresActivos: number;
 }
 
-export interface InformeSnapshot extends InformeResumen {
+export interface PanelPmReferencia {
+  id?: string | null;
+  nombre: string;
+  /** En cuántos de los proyectos de este Project Manager aparece. */
+  proyectos: number;
+}
+
+export interface PanelPmPersona {
+  nombre: string;
+  cargo: string;
+  proyectos: number;
+}
+
+export interface PanelPmProyecto {
   id: string;
-  tipo: string;
-  periodoKey: string;
-  createdAt: string;
+  nombre: string;
+  cliente?: string | null;
+  estado: string;
+  porcentajeAvance: number;
+  fechaEvento?: string | null;
+  prioridad?: string | null;
+  personas: number;
+  proveedores: string[];
 }
 
-export interface CrearInformeSnapshotInput {
-  tipo: string;
-  periodoKey: string;
+export interface PanelPmProjectManager {
+  /** null en la tarjeta especial "Sin Project Manager". */
+  id?: string | null;
+  nombre: string;
+  email?: string | null;
+  iniciales?: string | null;
+  activo: boolean;
+  totalProyectos: number;
+  totalPersonas: number;
+  totalClientes: number;
+  totalProveedores: number;
+  proyectos: PanelPmProyecto[];
+  personas: PanelPmPersona[];
+  clientes: PanelPmReferencia[];
+  proveedores: PanelPmReferencia[];
+}
+
+export interface PanelPm {
+  resumen: PanelPmResumen;
+  projectManagers: PanelPmProjectManager[];
+  sinProjectManager?: PanelPmProjectManager | null;
+}
+
+// ---------------------------------------------------------------------------
+// Configuración editable (2026-10-05)
+// ---------------------------------------------------------------------------
+
+export interface RolConfig {
+  /** Clave técnica -- no editable. */
+  rol: Rol;
+  etiqueta: string;
+  descripcion: string;
+}
+
+export type ListaConfigurable = "tipo-proyecto" | "prioridad" | "sede-next" | "estado-propuesta" | "area-seguimiento";
+
+export interface OpcionConfig {
+  id: string;
+  valor: string;
+  orden: number;
+  /** El sistema depende de este valor exacto: no se puede renombrar ni eliminar. */
+  protegido: boolean;
+}
+
+export type OpcionesConfig = Record<ListaConfigurable, OpcionConfig[]>;
+
+export interface DominioCorreo {
+  id: string;
+  dominio: string;
 }
 
 // ---------------------------------------------------------------------------

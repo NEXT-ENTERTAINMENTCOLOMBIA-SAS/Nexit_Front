@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useConfigStore } from "@/store/config-store";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, LogOut, Network, Plus, Search } from "lucide-react";
 import { presenciaApi } from "@/services/api/presencia-service";
@@ -92,6 +93,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (interval) clearInterval(interval);
       document.removeEventListener("visibilitychange", pingIfVisible);
     };
+  }, [user, estadoPerfil]);
+
+  // Nombres de roles y listas de Proyectos editables (Configuración): se cargan una vez con el perfil completo.
+  useEffect(() => {
+    if (user && estadoPerfil === "completo") void useConfigStore.getState().fetchConfig();
   }, [user, estadoPerfil]);
 
   useEffect(() => {

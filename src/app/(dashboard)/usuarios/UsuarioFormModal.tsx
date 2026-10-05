@@ -5,9 +5,10 @@ import { AlertTriangle, AtSign, KeyRound, ShieldCheck, User } from "lucide-react
 import { Modal } from "@/components/ui/Modal";
 import { Badge, Button, Dropdown } from "@/components/ui/primitives";
 import { Field, Input, Row } from "@/components/ui/form";
-import { CUENTA_ACTIVA_COLOR, CUENTA_INACTIVA_COLOR, ROLES_ASIGNABLES, ROL_LABELS } from "@/lib/constants";
+import { CUENTA_ACTIVA_COLOR, CUENTA_INACTIVA_COLOR, ROLES_ASIGNABLES } from "@/lib/constants";
 import { inicialesPersona } from "@/lib/format";
 import type { Rol, Usuario, UsuarioUpdateInput } from "@/types/api";
+import { useRolLabels } from "@/store/config-store";
 
 /* Hallmark · component: modal · genre: modern-minimal · theme: proyecto (tokens de globals.css)
  * states: default · hover · focus · active · disabled · loading · error · success
@@ -41,6 +42,7 @@ export function UsuarioFormModal({
   esMiPropiaCuenta?: boolean;
   enLinea?: boolean;
 }) {
+  const rolLabels = useRolLabels();
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
   const [rol, setRol] = useState<Rol>("miembro");
@@ -143,9 +145,9 @@ export function UsuarioFormModal({
             value={rol}
             onChange={(v) => setRol(v as Rol)}
             placeholder="Elige un rol"
-            options={ROLES_ASIGNABLES.map((r) => ({ value: r, label: ROL_LABELS[r] }))}
+            options={ROLES_ASIGNABLES.map((r) => ({ value: r, label: rolLabels[r] }))}
             disabled={esMiPropiaCuenta}
-            disabledHint={ROL_LABELS[rol]}
+            disabledHint={rolLabels[rol]}
           />
         </Field>
         <Field label="Acceso al sistema" icon={KeyRound}>

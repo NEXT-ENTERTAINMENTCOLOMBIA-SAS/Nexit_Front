@@ -15,12 +15,11 @@ import {
   CUENTA_ACTIVA_COLOR,
   CUENTA_INACTIVA_COLOR,
   ROL_COLORS,
-  ROL_DESCRIPCIONES,
-  ROL_LABELS,
-} from "@/lib/constants";
+  } from "@/lib/constants";
 import { inicialesPersona } from "@/lib/format";
 import { fmtFechaHora } from "@/lib/historial";
 import type { PresenciaUsuario, Usuario } from "@/types/api";
+import { useRolLabels, useRolDescripciones } from "@/store/config-store";
 
 /**
  * Perfil de una persona del equipo (Alicia 2026-09-08: "dónde está la parte para ver el perfil del
@@ -53,6 +52,8 @@ export function UsuarioDetail({
   motivoNoEliminable: string | null;
   onDelete: () => void;
 }) {
+  const rolLabels = useRolLabels();
+  const rolDescripciones = useRolDescripciones();
   if (!usuario) {
     return (
       <Drawer open={false} onClose={onClose} size="detail">
@@ -91,7 +92,7 @@ export function UsuarioDetail({
           <div className="mt-1 truncate text-[13px] text-text-3">{usuario.email}</div>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <Badge bg={rolColor.bg} color={rolColor.c}>
-              {ROL_LABELS[usuario.rol]}
+              {rolLabels[usuario.rol]}
             </Badge>
             <Badge bg={cuentaColor.bg} color={cuentaColor.c}>
               {usuario.activo ? "Cuenta activa" : "Cuenta desactivada"}
@@ -108,8 +109,8 @@ export function UsuarioDetail({
 
       <div className="flex-1 px-[22px] py-4">
         <DetailBox title="Acceso">
-          <DetailRow k="Rol" v={ROL_LABELS[usuario.rol]} />
-          <DetailRow k="Permisos" v={<span className="text-text-2">{ROL_DESCRIPCIONES[usuario.rol]}</span>} />
+          <DetailRow k="Rol" v={rolLabels[usuario.rol]} />
+          <DetailRow k="Permisos" v={<span className="text-text-2">{rolDescripciones[usuario.rol]}</span>} />
           <DetailRow
             k="Estado"
             v={

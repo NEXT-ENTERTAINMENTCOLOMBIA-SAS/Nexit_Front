@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, ChevronRight, MapPin, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Check, ChevronRight, Lock, MapPin, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { normalizarBusqueda } from "@/components/ui/primitives";
 import { RowAction } from "@/components/ui/Table";
@@ -41,6 +41,7 @@ export function CatalogList({
   onSelect,
   accent = "var(--text)",
   accentLight = "var(--gray-light)",
+  isLocked,
 }: {
   items: ItemCatalogo[];
   /** Nombre en plural de lo que contiene esta lista, para el contador ("12 categorías"). */
@@ -62,6 +63,8 @@ export function CatalogList({
    *  que no pase estos props. */
   accent?: string;
   accentLight?: string;
+  /** Ítems que el sistema necesita con ese nombre exacto (2026-10-05): se muestran con candado y sin editar/eliminar. */
+  isLocked?: (item: ItemCatalogo) => boolean;
 }) {
   const pushToast = useUiStore((s) => s.pushToast);
   const [draft, setDraft] = useState("");
@@ -213,6 +216,14 @@ export function CatalogList({
                 </RowAction>
               </>
             ) : (
+              isLocked?.(item) ? (
+              <>
+                <span className="min-w-0 flex-1 truncate text-[13px]">{item.nombre}</span>
+                <span title="El sistema usa este valor; no se puede renombrar ni eliminar" className="flex items-center gap-1 font-mono text-[10.5px] text-text-3">
+                  <Lock size={12} strokeWidth={1.8} /> fijo
+                </span>
+              </>
+              ) : (
               <>
                 <span className="min-w-0 flex-1 truncate text-[13px]">{item.nombre}</span>
                 <RowAction label="Editar" onClick={() => startEdit(item)}>
@@ -222,6 +233,7 @@ export function CatalogList({
                   <Trash2 size={13} strokeWidth={1.8} />
                 </RowAction>
               </>
+              )
             )}
             </div>
           ))}

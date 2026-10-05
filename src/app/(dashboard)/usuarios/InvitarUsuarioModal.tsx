@@ -10,12 +10,13 @@ import { AlertTriangle, AtSign, Mail, MessageSquareText, Send, ShieldCheck, X } 
 import { Modal } from "@/components/ui/Modal";
 import { Button, Dropdown } from "@/components/ui/primitives";
 import { Field, Textarea } from "@/components/ui/form";
-import { ROLES_ASIGNABLES, ROL_COLORS, ROL_LABELS } from "@/lib/constants";
+import { ROLES_ASIGNABLES, ROL_COLORS } from "@/lib/constants";
 import { DOMINIOS_CORREO_PERMITIDOS, esDominioPermitido, mensajeDominioNoPermitido } from "@/lib/dominios-correo";
 import { invitacionesApi } from "@/services/api/invitaciones-service";
 import { useAuthStore } from "@/store/auth-store";
 import { useUiStore } from "@/store/ui-store";
 import type { InvitacionFallida, Rol } from "@/types/api";
+import { useRolLabels } from "@/store/config-store";
 
 /** Mismo tope que CrearInvitacionesLoteValidator en Nexit_Back -- si cambia allá, cambia acá. */
 const MAXIMO_POR_LOTE = 25;
@@ -54,6 +55,7 @@ export function InvitarUsuarioModal({
   onClose: () => void;
   onInvitado: () => void;
 }) {
+  const rolLabels = useRolLabels();
   const pushToast = useUiStore((s) => s.pushToast);
   const quienInvita = useAuthStore((s) => s.user);
 
@@ -205,7 +207,7 @@ export function InvitarUsuarioModal({
           value={rol}
           onChange={(v) => setRol(v as Rol)}
           placeholder="Elige un rol"
-          options={ROLES_ASIGNABLES.map((r) => ({ value: r, label: ROL_LABELS[r] }))}
+          options={ROLES_ASIGNABLES.map((r) => ({ value: r, label: rolLabels[r] }))}
         />
       </Field>
 
@@ -221,7 +223,7 @@ export function InvitarUsuarioModal({
               >
                 <span className="truncate">{c.email}</span>
                 <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.04em] opacity-75">
-                  {ROL_LABELS[c.rol]}
+                  {rolLabels[c.rol]}
                 </span>
                 <button
                   type="button"
@@ -242,7 +244,7 @@ export function InvitarUsuarioModal({
             onPaste={onPaste}
             onBlur={() => agregar(borrador) && setBorrador("")}
             placeholder={
-              correos.length === 0 ? `nombre@${DOMINIOS_CORREO_PERMITIDOS[0]}` : `otro correo (${ROL_LABELS[rol].toLowerCase()})…`
+              correos.length === 0 ? `nombre@${DOMINIOS_CORREO_PERMITIDOS[0]}` : `otro correo (${rolLabels[rol].toLowerCase()})…`
             }
             className="min-w-[170px] flex-1 border-0 bg-transparent py-1 text-[13px] text-text outline-none placeholder:text-text-3"
           />
@@ -256,7 +258,7 @@ export function InvitarUsuarioModal({
               return (
                 <span key={r} className="inline-flex items-center gap-1.5">
                   <span aria-hidden className="h-2 w-2 rounded-full" style={{ backgroundColor: color.c }} />
-                  {n} como {ROL_LABELS[r]}
+                  {n} como {rolLabels[r]}
                 </span>
               );
             })}
@@ -290,7 +292,7 @@ export function InvitarUsuarioModal({
             <div className="min-w-0 text-[12.5px] leading-[1.5]">
               <div className="font-medium text-text">
                 {quienInvita?.displayName ?? "Alguien del equipo"} te invitó a Nexit
-                {unSoloRol ? ` como ${ROL_LABELS[rolDeEjemplo].toLowerCase()}` : " -- cada quien verá el rol que le asignaste"}
+                {unSoloRol ? ` como ${rolLabels[rolDeEjemplo].toLowerCase()}` : " -- cada quien verá el rol que le asignaste"}
               </div>
               <div className="mt-0.5 text-text-2">“{mensaje.trim()}”</div>
             </div>

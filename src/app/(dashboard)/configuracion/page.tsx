@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2, CalendarCheck2, MapPin, Settings, Tags, Truck, Wrench } from "lucide-react";
+import { AtSign, Building2, CalendarCheck2, Flag, Layers, MapPin, Settings, ShieldCheck, Tags, Truck, UsersRound, Wrench, Briefcase, ListChecks } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
 import { useCatalogosStore } from "@/store/catalogos-store";
 import styles from "@/styles/dashboard.module.css";
@@ -9,9 +9,18 @@ import { CatalogList } from "./CatalogList";
 import { UbicacionesSection } from "./UbicacionesSection";
 import { EstadosProyectoSection } from "./EstadosProyectoSection";
 import { EtapasClienteSection } from "./EtapasClienteSection";
+import { RolesSection } from "./RolesSection";
+import { UsuariosSection } from "./UsuariosSection";
+import { DominiosSection } from "./DominiosSection";
+import { ListasProyectoSection } from "./ListasProyectoSection";
+import { useConfigStore } from "@/store/config-store";
+import type { ListaConfigurable } from "@/types/api";
 
-type Seccion = "ubicaciones" | "categorias-proveedor" | "servicios" | "estados-proveedor" | "estados-proyecto" | "etapas-cliente";
-type Grupo = "ubicacion" | "proveedores" | "proyectos-clientes";
+type Seccion =
+  | "roles" | "usuarios" | "dominios"
+  | "ubicaciones" | "categorias-proveedor" | "servicios" | "estados-proveedor" | "estados-proyecto" | "etapas-cliente"
+  | `lista:${ListaConfigurable}`;
+type Grupo = "acceso" | "ubicacion" | "proveedores" | "proyectos-clientes";
 
 /**
  * Configuración (2026-09-09, debajo de Usuarios en el riel): así como admin/super_admin pueden
@@ -39,12 +48,16 @@ type Grupo = "ubicacion" | "proveedores" | "proyectos-clientes";
  *    Linear marca el ítem activo (fondo más claro, no un bloque opaco).
  */
 const GRUPOS: Record<Grupo, { label: string; color: string; light: string }> = {
+  acceso: { label: "Personas y acceso", color: "var(--text)", light: "var(--gray-light)" },
   ubicacion: { label: "Ubicación", color: "var(--blue)", light: "var(--blue-light)" },
   proveedores: { label: "Proveedores", color: "var(--amber)", light: "var(--amber-light)" },
   "proyectos-clientes": { label: "Proyectos y clientes", color: "var(--success)", light: "var(--success-light)" },
 };
 
-const SECCIONES: { id: Seccion; grupo: Grupo; label: string; icon: typeof MapPin; descripcion: string }[] = [
+const SECCIONES: { id: Seccion; grupo: Grupo; label: string; icon: typeof MapPin; descripcion: string; soloSuper?: boolean }[] = [
+  { id: "roles", grupo: "acceso", label: "Roles", icon: ShieldCheck, descripcion: "Cambia el nombre y la descripción de cada rol; se refleja en toda la app. Los permisos de cada uno no cambian." },
+  { id: "usuarios", grupo: "acceso", label: "Usuarios", icon: UsersRound, descripcion: "Edita nombre, apellido, rol y estado de cada persona del equipo." },
+  { id: "dominios", grupo: "acceso", label: "Dominios de correo", icon: AtSign, descripcion: "Dominios con los que se permite crear cuentas nuevas.", soloSuper: true },
   { id: "ubicaciones", grupo: "ubicacion", label: "Ubicaciones", icon: MapPin, descripcion: "Países, regiones y ciudades -- alimentan los selectores de ubicación de Clientes y Proveedores." },
   { id: "categorias-proveedor", grupo: "proveedores", label: "Categorías de proveedor", icon: Tags, descripcion: "Aparecen en el desplegable “Categoría” del formulario de Proveedor." },
   { id: "servicios", grupo: "proveedores", label: "Servicios", icon: Wrench, descripcion: "El catálogo de servicios que puede ofrecer un proveedor." },
@@ -53,7 +66,16 @@ const SECCIONES: { id: Seccion; grupo: Grupo; label: string; icon: typeof MapPin
   { id: "etapas-cliente", grupo: "proyectos-clientes", label: "Etapas de proceso comercial", icon: Building2, descripcion: "Las etapas previas a que exista un brief -- distintas del estado del cliente (Activo/Prospecto/Inactivo)." },
 ];
 
-const GRUPOS_ORDEN: Grupo[] = ["ubicacion", "proveedores", "proyectos-clientes"];
+const LISTAS_PROYECTO: { id: ListaConfigurable; label: string; icon: typeof MapPin; descripcion: string }[] = [
+  { id: "tipo-proyecto", label: "Tipos de proyecto", icon: Briefcase, descripcion: "Opciones del campo “Tipo” del proyecto. Renombrar actualiza los proyectos que ya lo usan." },
+  { id: "prioridad", label: "Prioridades", icon: Flag, descripcion: "Opciones de prioridad. “Alta” y “Media” están fijas: el cálculo automático de prioridad las necesita." },
+  { id: "sede-next", label: "Sedes de Next", icon: MapPin, descripcion: "Sedes de la agencia que se pueden asignar a un proyecto." },
+  { id: "estado-propuesta", label: "Estados de la propuesta", icon: ListChecks, descripcion: "Estado de la propuesta comercial. “No enviada” está fija." },
+  { id: "area-seguimiento", label: "Áreas de seguimiento", icon: Layers, descripcion: "Áreas para clasificar las notas de seguimiento. “General” está fija." },
+];
+for (const l of LISTAS_PROYECTO) SECCIONES.push({ id: `lista:${l.id}`, grupo: "proyectos-clientes", label: l.label, icon: l.icon, descripcion: l.descripcion });
+
+const GRUPOS_ORDEN: Grupo[] = ["acceso", "ubicacion", "proveedores", "proyectos-clientes"];
 
 export default function ConfiguracionPage() {
   const user = useAuthStore((s) => s.user);
@@ -74,11 +96,17 @@ export default function ConfiguracionPage() {
     updateEstadoProveedor,
     removeCatalogo,
   } = useCatalogosStore();
-  const [seccion, setSeccion] = useState<Seccion>("ubicaciones");
+  const esSuper = user?.rol === "super_admin";
+  const fetchConfig = useConfigStore((st) => st.fetchConfig);
+  const secciones = SECCIONES.filter((x) => !x.soloSuper || esSuper);
+  const [seccion, setSeccion] = useState<Seccion>("roles");
 
   useEffect(() => {
-    if (puedeVer) fetchBase();
-  }, [puedeVer, fetchBase]);
+    if (puedeVer) {
+      fetchBase();
+      fetchConfig({ force: true });
+    }
+  }, [puedeVer, fetchBase, fetchConfig]);
 
   if (!puedeVer) {
     return (
@@ -97,16 +125,16 @@ export default function ConfiguracionPage() {
     "estados-proyecto": estadosProyecto.length,
     "etapas-cliente": etapasCliente.length,
   };
-  const activa = SECCIONES.find((s) => s.id === seccion)!;
+  const activa = secciones.find((s) => s.id === seccion) ?? secciones[0];
   const grupoActivo = GRUPOS[activa.grupo];
 
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <div className="mb-1 font-mono text-[11px] uppercase tracking-widest text-text-3">Catálogos</div>
+        <div className="mb-1 font-mono text-[11px] uppercase tracking-widest text-text-3">Sistema</div>
         <h1 className={styles.h1}>Configuración</h1>
         <p className="mt-1 max-w-[640px] text-[13px] text-text-2">
-          Los catálogos que usan los formularios de Clientes, Proveedores y Proyectos -- agregar o editar acá se refleja de inmediato en esas pantallas.
+          Todo lo que se puede ajustar en Nexit: nombres de roles, personas, listas y catálogos. Lo que cambies acá se refleja de inmediato en el resto de la app.
         </p>
       </div>
 
@@ -114,7 +142,7 @@ export default function ConfiguracionPage() {
         <nav className="flex flex-shrink-0 flex-col gap-3 rounded-[var(--radius-lg)] border border-border bg-surface p-2.5 shadow-[0_1px_3px_rgba(12,12,12,.04)] min-[1001px]:w-[280px]">
           {GRUPOS_ORDEN.map((g) => {
             const grupo = GRUPOS[g];
-            const items = SECCIONES.filter((s) => s.grupo === g);
+            const items = secciones.filter((s) => s.grupo === g);
             return (
               <div key={g} className="flex flex-col gap-0.5">
                 <div className="px-2 pb-1 pt-1 font-mono text-[10px] font-semibold uppercase tracking-widest text-text-3">{grupo.label}</div>
@@ -174,6 +202,11 @@ export default function ConfiguracionPage() {
               <p className="mt-0.5 text-[12.5px] text-text-3">{activa.descripcion}</p>
             </div>
           </div>
+
+          {seccion === "roles" && <RolesSection />}
+          {seccion === "usuarios" && <UsuariosSection />}
+          {seccion === "dominios" && esSuper && <DominiosSection />}
+          {seccion.startsWith("lista:") && <ListasProyectoSection lista={seccion.slice(6) as ListaConfigurable} />}
 
           {seccion === "ubicaciones" && <UbicacionesSection />}
 

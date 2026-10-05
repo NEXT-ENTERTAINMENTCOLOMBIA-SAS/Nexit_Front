@@ -1,5 +1,6 @@
 "use client";
 
+import { useOpciones } from "@/store/config-store";
 import { useEffect, useState } from "react";
 import { ExternalLink, MessageCircle, Pencil, Plus } from "lucide-react";
 import { Avatar, Badge, Dropdown, Stars } from "@/components/ui/primitives";
@@ -30,7 +31,6 @@ import type { HistorialCambio, Proveedor, Proyecto, SeguimientoProyecto } from "
 // Debe calzar EXACTO con `Areas` en Nexit_Back/.../Validators/Proyectos/ProyectoValidators.cs
 // (CrearSeguimientoProyectoValidator) -- si no coincide, agregar la entrada a la bitácora
 // falla en el backend con "El área de seguimiento no es válida.".
-const AREAS_SEGUIMIENTO = ["General", "Creativo", "Comercial", "Administrativo"];
 
 /**
  * Sin botón de eliminar: aquí solo se mira y se puede editar. Eliminar (o
@@ -264,7 +264,8 @@ function Bitacora({ proyectoId }: { proyectoId: string }) {
   const pushToast = useUiStore((s) => s.pushToast);
   const [entradas, setEntradas] = useState<SeguimientoProyecto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [area, setArea] = useState(AREAS_SEGUIMIENTO[0]);
+  const areas = useOpciones("area-seguimiento");
+  const [area, setArea] = useState("General");
   const [nota, setNota] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -303,7 +304,7 @@ function Bitacora({ proyectoId }: { proyectoId: string }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-border bg-bg p-3">
-        <Dropdown value={area} onChange={(v) => setArea(v || AREAS_SEGUIMIENTO[0])} placeholder="Área" options={AREAS_SEGUIMIENTO.map((a) => ({ value: a, label: a }))} />
+        <Dropdown value={area} onChange={(v) => setArea(v || "General")} placeholder="Área" options={areas.map((a) => ({ value: a, label: a }))} />
         <Textarea value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Nueva nota interna…" className="!bg-surface" />
         <button
           type="button"

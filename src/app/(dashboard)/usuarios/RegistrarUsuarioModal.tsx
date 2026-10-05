@@ -10,12 +10,13 @@ import { AlertTriangle, AtSign, KeyRound, ShieldCheck, User, UserPlus } from "lu
 import { Modal } from "@/components/ui/Modal";
 import { Button, Dropdown } from "@/components/ui/primitives";
 import { Field, Input, Row } from "@/components/ui/form";
-import { ROLES_ASIGNABLES, ROL_LABELS } from "@/lib/constants";
+import { ROLES_ASIGNABLES } from "@/lib/constants";
 import { inicialesPersona } from "@/lib/format";
 import { DOMINIOS_CORREO_PERMITIDOS, esDominioPermitido, mensajeDominioNoPermitido } from "@/lib/dominios-correo";
 import { usuariosApi } from "@/services/api/usuarios-service";
 import { useUiStore } from "@/store/ui-store";
 import type { Rol } from "@/types/api";
+import { useRolLabels } from "@/store/config-store";
 
 /**
  * Dar de alta a alguien de una vez, sin correo de invitación de por medio: el backend crea su cuenta
@@ -37,6 +38,7 @@ export function RegistrarUsuarioModal({
   onClose: () => void;
   onRegistrado: () => void;
 }) {
+  const rolLabels = useRolLabels();
   const pushToast = useUiStore((s) => s.pushToast);
 
   const [nombre, setNombre] = useState("");
@@ -125,7 +127,7 @@ export function RegistrarUsuarioModal({
             value={rol}
             onChange={(v) => setRol(v as Rol)}
             placeholder="Elige un rol"
-            options={ROLES_ASIGNABLES.map((r) => ({ value: r, label: ROL_LABELS[r] }))}
+            options={ROLES_ASIGNABLES.map((r) => ({ value: r, label: rolLabels[r] }))}
           />
         </Field>
       </Row>
@@ -143,7 +145,7 @@ export function RegistrarUsuarioModal({
           <div className="min-w-0 text-[12.5px] leading-[1.45]">
             <div className="truncate font-medium text-text">{nombreCompleto}</div>
             <div className="truncate text-text-2">
-              {correo.trim() || "sin correo todavía"} · {ROL_LABELS[rol]}
+              {correo.trim() || "sin correo todavía"} · {rolLabels[rol]}
             </div>
           </div>
         </div>

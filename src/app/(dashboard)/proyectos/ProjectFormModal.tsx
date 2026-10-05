@@ -17,16 +17,10 @@ import { proyectoAdjuntosApi } from "@/services/api/proyecto-adjuntos-service";
 import { usuariosApi } from "@/services/api/usuarios-service";
 import type { Proveedor, Proyecto, ProyectoEquipoMiembro, ProyectoInput, UsuarioEquipo } from "@/types/api";
 import { ProviderPicker } from "./ProviderPicker";
+import { useOpciones } from "@/store/config-store";
 
-// Debe calzar EXACTO con `Propuestas` en Nexit_Back/.../Validators/Proyectos/ProyectoValidators.cs
-// -- si no coincide, guardar el proyecto falla en el backend con "El estado de la propuesta no es válido.".
-const PROPUESTA_ESTADOS = ["No enviada", "En proceso", "Enviada"];
-// Listas base del mockup aprobado -- el valor ya guardado en un proyecto viejo (si no está
-// en esta lista) se agrega igual como opción extra, para no perderlo por venir de antes de
-// que este campo se volviera un dropdown cerrado.
-const TIPO_BASE = ["Corporativo", "Evento social"];
-const PRIORIDAD_BASE = ["Alta", "Media", "Baja"];
-const SEDE_BASE = ["Bogotá", "Ciudad de México"];
+// Las listas (tipo, prioridad, sede, estado de la propuesta) son editables en Configuración; ver useOpciones.
+const PROPUESTA_ESTADOS = ["No enviada"]; // solo el valor inicial de un proyecto nuevo (valor fijo del sistema)
 
 function withCurrent(base: string[], current: string): string[] {
   return current && !base.includes(current) ? [...base, current] : base;
@@ -96,6 +90,10 @@ export function ProjectFormModal({
   pendingAdjuntos: PendingAttachment[];
   onPendingAdjuntosChange: (next: PendingAttachment[]) => void;
 }) {
+  const tipoOpts = useOpciones("tipo-proyecto");
+  const prioridadOpts = useOpciones("prioridad");
+  const sedeOpts = useOpciones("sede-next");
+  const propuestaOpts = useOpciones("estado-propuesta");
   const user = useAuthStore((s) => s.user);
   const pushToast = useUiStore((s) => s.pushToast);
   const { estadosProyecto, fasesProyecto, fetchBase } = useCatalogosStore();
@@ -382,7 +380,7 @@ export function ProjectFormModal({
                 value={form.tipoProyecto}
                 onChange={(v) => set("tipoProyecto", v)}
                 placeholder="Elige un tipo"
-                options={withCurrent(TIPO_BASE, form.tipoProyecto).map((t) => ({ value: t, label: t }))}
+                options={withCurrent(tipoOpts, form.tipoProyecto).map((t) => ({ value: t, label: t }))}
               />
             </Field>
             <Field label="Prioridad">
@@ -390,7 +388,7 @@ export function ProjectFormModal({
                 value={form.prioridad}
                 onChange={(v) => set("prioridad", v)}
                 placeholder="Elige prioridad"
-                options={withCurrent(PRIORIDAD_BASE, form.prioridad).map((p) => ({ value: p, label: p }))}
+                options={withCurrent(prioridadOpts, form.prioridad).map((p) => ({ value: p, label: p }))}
               />
             </Field>
           </Row>
@@ -406,7 +404,7 @@ export function ProjectFormModal({
                 value={form.sedeNext}
                 onChange={(v) => set("sedeNext", v)}
                 placeholder="Elige sede"
-                options={withCurrent(SEDE_BASE, form.sedeNext).map((s) => ({ value: s, label: s }))}
+                options={withCurrent(sedeOpts, form.sedeNext).map((s) => ({ value: s, label: s }))}
               />
             </Field>
           </Row>
@@ -449,7 +447,7 @@ export function ProjectFormModal({
                 value={form.propuestaEstado}
                 onChange={(v) => set("propuestaEstado", v || PROPUESTA_ESTADOS[0])}
                 placeholder="Elige un estado"
-                options={withCurrent(PROPUESTA_ESTADOS, form.propuestaEstado).map((p) => ({ value: p, label: p }))}
+                options={withCurrent(propuestaOpts, form.propuestaEstado).map((p) => ({ value: p, label: p }))}
               />
             </Field>
             <label className="flex h-10 w-fit cursor-pointer items-center gap-2 self-end whitespace-nowrap pb-2.5 text-sm font-medium text-text">

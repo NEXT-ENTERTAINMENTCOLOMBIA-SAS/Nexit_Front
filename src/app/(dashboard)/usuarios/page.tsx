@@ -19,8 +19,7 @@ import {
   CUENTA_INACTIVA_COLOR,
   ROLES,
   ROL_COLORS,
-  ROL_LABELS,
-} from "@/lib/constants";
+  } from "@/lib/constants";
 import { haceCuanto, inicialesPersona } from "@/lib/format";
 import { fmtFechaHora } from "@/lib/historial";
 import { invitacionesApi } from "@/services/api/invitaciones-service";
@@ -47,6 +46,7 @@ import { RegistrarUsuarioModal } from "./RegistrarUsuarioModal";
 import { UsuarioDetail } from "./UsuarioDetail";
 import { UsuarioFormModal } from "./UsuarioFormModal";
 import styles from "@/styles/dashboard.module.css";
+import { useRolLabels } from "@/store/config-store";
 
 const ENTIDAD_LABELS: Record<TipoEntidadEliminable, string> = {
   cliente: "Cliente",
@@ -133,6 +133,7 @@ function SeccionHeader({
 }
 
 export default function UsuariosPage() {
+  const rolLabels = useRolLabels();
   const authUser = useAuthStore((s) => s.user);
   const pushToast = useUiStore((s) => s.pushToast);
   const setToolbar = usePageToolbarStore((s) => s.setToolbar);
@@ -255,7 +256,7 @@ export default function UsuariosPage() {
         return usuarios
           .map((u) => {
             const nombreCompleto = `${u.nombre} ${u.apellido}`.trim().toLowerCase();
-            const rolLabel = (ROL_LABELS[u.rol] ?? u.rol).toLowerCase();
+            const rolLabel = (rolLabels[u.rol] ?? u.rol).toLowerCase();
             const rank = nombreCompleto.startsWith(q)
               ? 0
               : nombreCompleto.includes(q)
@@ -271,7 +272,7 @@ export default function UsuariosPage() {
           .map(({ u }): SearchSuggestion => ({
             id: u.id,
             label: `${u.nombre} ${u.apellido}`.trim(),
-            sublabel: [ROL_LABELS[u.rol] ?? u.rol, u.email].filter(Boolean).join(" · ") || undefined,
+            sublabel: [rolLabels[u.rol] ?? u.rol, u.email].filter(Boolean).join(" · ") || undefined,
           }));
       },
       onSelectSuggestion: (s) => {
@@ -280,7 +281,7 @@ export default function UsuariosPage() {
       },
     });
     return clearToolbar;
-  }, [setToolbar, clearToolbar, esAdmin, load, usuarios]);
+  }, [setToolbar, clearToolbar, esAdmin, load, usuarios, rolLabels]);
 
   const presenciaPorId = useMemo(() => new Map(presencia.map((p) => [p.id, p])), [presencia]);
 
@@ -328,14 +329,14 @@ export default function UsuariosPage() {
       return (
         `${u.nombre} ${u.apellido}`.toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
-        ROL_LABELS[u.rol].toLowerCase().includes(q)
+        (rolLabels[u.rol] ?? u.rol).toLowerCase().includes(q)
       );
     });
-  }, [usuarios, filtRol, filtEstado, filtConexion, search, presenciaPorId]);
+  }, [usuarios, filtRol, filtEstado, filtConexion, search, presenciaPorId, rolLabels]);
 
   const chips: FilterChip[] = [
     search && { key: "search", label: `“${search}”` },
-    filtRol && { key: "rol", label: ROL_LABELS[filtRol as Rol] },
+    filtRol && { key: "rol", label: rolLabels[filtRol as Rol] },
     filtEstado && { key: "estado", label: ESTADOS_CUENTA.find((e) => e.value === filtEstado)?.label ?? filtEstado },
     filtConexion && { key: "conexion", label: CONEXION.find((c) => c.value === filtConexion)?.label ?? filtConexion },
   ].filter(Boolean) as FilterChip[];
@@ -469,7 +470,7 @@ export default function UsuariosPage() {
             value={filtRol}
             onChange={setFiltRol}
             placeholder="Todos los roles"
-            options={ROLES.map((r) => ({ value: r, label: ROL_LABELS[r] }))}
+            options={ROLES.map((r) => ({ value: r, label: rolLabels[r] }))}
           />
           <Dropdown value={filtEstado} onChange={setFiltEstado} placeholder="Todos los estados" options={ESTADOS_CUENTA} />
           <Dropdown value={filtConexion} onChange={setFiltConexion} placeholder="Toda la actividad" options={CONEXION} />
@@ -541,7 +542,7 @@ export default function UsuariosPage() {
                     <Td className="text-center text-text-2">{u.email}</Td>
                     <Td className="text-center">
                       <Badge bg={rolColor.bg} color={rolColor.c}>
-                        {ROL_LABELS[u.rol]}
+                        {rolLabels[u.rol]}
                       </Badge>
                     </Td>
                     <Td className="text-center">
@@ -668,7 +669,7 @@ export default function UsuariosPage() {
                       </Td>
                       <Td className="text-center">
                         <Badge bg={rolColor.bg} color={rolColor.c}>
-                          {ROL_LABELS[i.rol]}
+                          {rolLabels[i.rol]}
                         </Badge>
                       </Td>
                       <Td className="text-center text-text-2">{i.invitadoPorNombre ?? "—"}</Td>
