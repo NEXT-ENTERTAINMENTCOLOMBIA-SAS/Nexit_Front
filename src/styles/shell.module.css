@@ -15,7 +15,7 @@
 
 .shell {
   display: grid;
-  grid-template-columns: 68px 1fr;
+  grid-template-columns: 68px minmax(0, 1fr);
   min-height: 100vh;
   transition: grid-template-columns 160ms ease;
 }
@@ -23,12 +23,12 @@
    2026-09-02 del HTML aprobado, botón "Expandir/Contraer menú" al pie del
    riel (antes ese botón no tenía ningún efecto). */
 .shell.expanded {
-  grid-template-columns: 238px 1fr;
+  grid-template-columns: 238px minmax(0, 1fr);
 }
 @media (max-width: 1000px) {
   .shell,
   .shell.expanded {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -61,6 +61,7 @@
    otro. */
 .main {
   width: 100%;
+  min-width: 0;
   padding: 102px 44px 40px;
 }
 

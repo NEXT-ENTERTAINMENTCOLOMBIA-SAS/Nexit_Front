@@ -332,12 +332,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               aria-autocomplete="list"
               aria-controls="global-search-listbox"
             />
-            <kbd
-              title="Buscar en todo: proyectos, clientes y proveedores"
-              className="pointer-events-none hidden flex-shrink-0 rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-text-3 min-[1001px]:block"
-            >
-              Ctrl K
-            </kbd>
           </label>
           {suggestOpen && suggestions.length > 0 && (
             <div

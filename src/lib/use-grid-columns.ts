@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
 /**
  * Calcula cuántas columnas debe tener una grilla de tarjetas para que
@@ -60,11 +60,14 @@ function computeColumns(width: number, min: number, max: number, gap: number): n
 }
 
 export function useGridColumns(min = 240, max = 300, gap = 12) {
-  const ref = useRef<HTMLDivElement>(null);
+  // Ref de callback: si la grilla se monta DESPUÉS del primer render de la página (p. ej.
+  // mientras cargan los datos se muestra un esqueleto y la grilla aparece luego), el efecto
+  // se vuelve a ejecutar cuando el elemento realmente existe. Con un useRef normal el efecto
+  // corría una sola vez con el elemento aún ausente y las columnas se quedaban en 1.
+  const [el, setEl] = useState<HTMLDivElement | null>(null);
   const [columns, setColumns] = useState(1);
 
   useIsomorphicLayoutEffect(() => {
-    const el = ref.current;
     if (!el) return;
 
     let cancelled = false;
@@ -93,7 +96,7 @@ export function useGridColumns(min = 240, max = 300, gap = 12) {
       if (retryFrame) cancelAnimationFrame(retryFrame);
       observer.disconnect();
     };
-  }, [min, max, gap]);
+  }, [el, min, max, gap]);
 
-  return { ref, columns };
+  return { ref: setEl, columns };
 }
