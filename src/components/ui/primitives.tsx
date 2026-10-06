@@ -115,7 +115,7 @@ export function Avatar({
   const fontSize = size === "lg" ? 15 : size === "sm" ? 9 : 13;
   return (
     <div
-      className="flex flex-shrink-0 items-center justify-center rounded-[3px] bg-text font-semibold text-green"
+      className="flex flex-shrink-0 items-center justify-center rounded-[3px] bg-ink font-semibold text-green"
       style={{ width: px, height: px, fontSize }}
     >
       {initials(nombre)}
@@ -192,6 +192,14 @@ export function EmptyState({
  * en el mockup aprobado los KPI "Activos" van en verde (#036B3C) y
  * "Prospectos" en ámbar (#7A4E00), no todos en negro.
  */
+const ACENTOS: Record<string, string> = {
+  "#036B3C": "var(--success)",
+  "#27500A": "var(--success)",
+  "#7A4E00": "var(--amber)",
+  "#8A2525": "var(--red)",
+  "#0C0C0C": "var(--text)",
+};
+
 export function StatCard({
   n,
   label,
@@ -206,18 +214,20 @@ export function StatCard({
    * existían en Clientes/Proveedores/Proyectos no pasan `icon` y no cambian de aspecto. */
   icon?: LucideIcon;
 }) {
+  // Los acentos escritos en hexadecimal se pasan a las variables del tema para que se lean también en modo oscuro.
+  const color = accent ? (ACENTOS[accent.toUpperCase()] ?? accent) : undefined;
   return (
     <div className="relative min-h-[80px] overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface px-4 py-3.5 shadow-[0_1px_3px_rgba(12,12,12,.04)] transition-shadow hover:shadow-[0_2px_10px_rgba(12,12,12,.07)]">
       {Icon && (
         <span
           className="absolute right-3.5 top-3.5 flex h-7 w-7 items-center justify-center rounded-full bg-gray-light"
-          style={accent ? { color: accent, background: `${accent}14` } : undefined}
+          style={color ? { color, background: `color-mix(in srgb, ${color} 10%, transparent)` } : undefined}
         >
           <Icon size={14} strokeWidth={1.8} />
         </span>
       )}
       <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-text-3">{label}</div>
-      <div className="mt-1.5 text-[28px] font-semibold leading-none tracking-[-0.03em]" style={accent ? { color: accent } : undefined}>
+      <div className="mt-1.5 text-[28px] font-semibold leading-none tracking-[-0.03em]" style={color ? { color } : undefined}>
         {n}
       </div>
     </div>
@@ -363,7 +373,7 @@ export function TabsShell({ children, className }: { children: ReactNode; classN
   // `self-start` en los consumidores que viven dentro de un `flex flex-col` -- por defecto un
   // flex item se estira al ancho del contenedor (align-items: stretch), así que sin eso la
   // franja gris queda ocupando todo el ancho de la página en vez de ajustarse a los botones.
-  return <div className={clsx("inline-flex gap-0.5 rounded-[var(--radius-lg)] bg-[#EAE8E1] p-[3px]", className)}>{children}</div>;
+  return <div className={clsx("inline-flex gap-0.5 rounded-[var(--radius-lg)] bg-track p-[3px]", className)}>{children}</div>;
 }
 
 export function TabButton({
@@ -645,7 +655,7 @@ function DropdownItem({ label, selected, onClick }: { label: string; selected: b
       // de TabButton, solo que aquí con `style` en vez de una clase base fija.
       className={clsx(
         "flex w-full cursor-pointer items-center gap-[9px] whitespace-nowrap rounded-[3px] px-[9px] py-2 text-left text-sm text-text hover:bg-gray-light",
-        selected ? "bg-[#F1EFE8]" : "bg-transparent",
+        selected ? "bg-gray-light" : "bg-transparent",
       )}
     >
       <span className="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center text-[#00A85A]">
@@ -724,7 +734,7 @@ export function Pagination({
               className={clsx(
                 "h-8 min-w-[36px] cursor-pointer rounded-[var(--radius-md)] border px-2.5 text-[13px] transition-colors",
                 perPage === n
-                  ? "border-text bg-text font-semibold text-white"
+                  ? "border-text bg-ink font-semibold text-white"
                   : "border-border bg-surface font-normal text-text-2 hover:border-text",
               )}
             >
@@ -761,7 +771,7 @@ export function Pagination({
                 className={clsx(
                   "h-8 min-w-[32px] cursor-pointer rounded-[var(--radius-md)] border px-2 text-[13px] transition-colors",
                   n === current
-                    ? "border-text bg-text font-semibold text-white"
+                    ? "border-text bg-ink font-semibold text-white"
                     : "border-border bg-surface font-normal text-text hover:border-text",
                 )}
               >

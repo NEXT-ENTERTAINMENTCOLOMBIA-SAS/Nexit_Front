@@ -104,7 +104,7 @@ export function PasswordInput({
         tabIndex={-1}
         onClick={() => setVisible((v) => !v)}
         aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
-        className="absolute right-[5px] top-[5px] flex h-[38px] w-[38px] items-center justify-center rounded-[3px] border border-border bg-bg text-text transition-colors hover:border-text hover:bg-text hover:text-green"
+        className="absolute right-[5px] top-[5px] flex h-[38px] w-[38px] items-center justify-center rounded-[3px] border border-border bg-bg text-text transition-colors hover:border-text hover:bg-ink hover:text-green"
       >
         {visible ? <EyeOff size={17} strokeWidth={1.7} /> : <Eye size={17} strokeWidth={1.7} />}
       </button>

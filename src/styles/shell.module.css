@@ -74,7 +74,7 @@
   height: 66px;
   align-items: center;
   border-bottom: 1px solid var(--border);
-  background: rgba(244, 243, 239, 0.96);
+  background: color-mix(in srgb, var(--bg) 96%, transparent);
   padding: 0 36px;
   transition: left 160ms ease;
 }
@@ -137,7 +137,7 @@
     z-index: 20;
     height: 60px;
     padding: 0 18px;
-    background: rgba(244, 243, 239, 0.9);
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
     border-bottom: 1px solid var(--border);

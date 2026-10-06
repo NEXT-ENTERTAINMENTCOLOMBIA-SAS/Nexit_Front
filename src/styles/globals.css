@@ -49,6 +49,8 @@
   --success-light: #e4f9ee;
 
   --gray-light: #f1efe8;
+  --ink: #0c0c0c; /* negro fijo: fondo de chips/botones "invertidos" que no deben cambiar con el tema */
+  --track: #eae8e1; /* fondo de las pestañas segmentadas */
   --divider: #efede7; /* líneas suaves entre filas */
   --soft: #fbfaf7; /* fondo apenas distinto del blanco */
   --hover-bg: #f4f3ef; /* fondo al pasar el cursor */
@@ -84,6 +86,7 @@
   --success: #4cd08e;
   --success-light: #0f2e20;
   --gray-light: #262522;
+  --track: #262522;
   --divider: #262522;
   --soft: #20201e;
   --hover-bg: #262522;
@@ -123,6 +126,8 @@
   --color-success-light: var(--success-light);
 
   --color-gray-light: var(--gray-light);
+  --color-ink: var(--ink);
+  --color-track: var(--track);
   --color-divider: var(--divider);
   --color-soft: var(--soft);
   --color-hover-bg: var(--hover-bg);

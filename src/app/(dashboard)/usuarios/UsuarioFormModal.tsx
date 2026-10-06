@@ -106,7 +106,7 @@ export function UsuarioFormModal({
       {/* Tarjeta de identidad: quién se está editando, sin tener que deducirlo de los campos. */}
       <div className="mb-5 flex items-center gap-3.5 rounded-[var(--radius-lg)] border border-border bg-gray-light px-4 py-3.5">
         <div className="relative">
-          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-text text-[15px] font-semibold text-green">
+          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-ink text-[15px] font-semibold text-green">
             {inicialesPreview}
           </div>
           {enLinea && (

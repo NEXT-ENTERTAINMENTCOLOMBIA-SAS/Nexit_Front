@@ -332,6 +332,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               aria-autocomplete="list"
               aria-controls="global-search-listbox"
             />
+            <kbd
+              title="Buscar en todo: proyectos, clientes y proveedores"
+              className="pointer-events-none hidden flex-shrink-0 rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-text-3 min-[1001px]:block"
+            >
+              Ctrl K
+            </kbd>
           </label>
           {suggestOpen && suggestions.length > 0 && (
             <div
@@ -356,17 +362,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
         </div>
         <div className="ml-auto flex flex-shrink-0 items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => setPaletteOpen(true)}
-            aria-label="Abrir buscador global"
-            title="Buscar en todo (Ctrl+K)"
-            className="hidden h-9 items-center gap-2 rounded-[var(--radius-md)] border border-border bg-surface px-2.5 text-[12px] text-text-3 transition-colors hover:border-border-strong hover:text-text min-[1001px]:flex"
-          >
-            <Search size={14} strokeWidth={1.8} />
-            <span>Buscar en todo</span>
-            <kbd className="rounded border border-border px-1 font-mono text-[10px]">Ctrl K</kbd>
-          </button>
           <button
             type="button"
             onClick={alternarTema}

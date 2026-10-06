@@ -195,7 +195,7 @@ export function NotificationsBell() {
             <div className="flex items-center gap-2">
               <span className="text-[13px] font-semibold">Notificaciones</span>
               {noLeidas.length > 0 && (
-                <span className="rounded-[20px] bg-text px-[7px] py-[2px] font-mono text-[10px] font-medium text-green">
+                <span className="rounded-[20px] bg-ink px-[7px] py-[2px] font-mono text-[10px] font-medium text-green">
                   {noLeidas.length}
                 </span>
               )}

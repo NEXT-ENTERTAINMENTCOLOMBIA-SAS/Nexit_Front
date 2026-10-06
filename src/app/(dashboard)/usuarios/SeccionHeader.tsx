@@ -33,7 +33,7 @@ export function SeccionHeader({
           <div className="flex items-center gap-2">
             <h2 className="text-[15px] font-semibold leading-tight">{titulo}</h2>
             {conteo !== undefined && conteo > 0 && (
-              <span className="rounded-[20px] bg-text px-[7px] py-[2px] font-mono text-[10px] font-medium text-green">
+              <span className="rounded-[20px] bg-ink px-[7px] py-[2px] font-mono text-[10px] font-medium text-green">
                 {conteo}
               </span>
             )}

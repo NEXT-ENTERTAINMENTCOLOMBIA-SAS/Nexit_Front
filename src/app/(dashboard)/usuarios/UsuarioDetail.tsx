@@ -76,7 +76,7 @@ export function UsuarioDetail({
     <Drawer open={Boolean(usuario)} onClose={onClose} size="detail">
       <DrawerHeader>
         <div className="relative">
-          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-text text-[15px] font-semibold text-green">
+          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-ink text-[15px] font-semibold text-green">
             {inicialesPersona(usuario.nombre, usuario.apellido)}
           </div>
           {enLinea && (

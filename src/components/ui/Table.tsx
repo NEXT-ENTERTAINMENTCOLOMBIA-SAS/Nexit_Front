@@ -40,7 +40,7 @@ export function Tr({ onClick, children }: { onClick?: () => void; children: Reac
   return (
     <tr
       onClick={onClick}
-      className={`border-b border-divider last:border-b-0 ${onClick ? "cursor-pointer hover:bg-[#F9F8F5]" : ""}`}
+      className={`border-b border-divider last:border-b-0 ${onClick ? "cursor-pointer hover:bg-soft" : ""}`}
     >
       {children}
     </tr>
@@ -83,7 +83,7 @@ export function RowAction({
           ? "cursor-not-allowed opacity-40"
           : tone === "danger"
             ? "cursor-pointer hover:border-red hover:bg-red-light hover:text-red"
-            : "cursor-pointer hover:border-text hover:bg-text hover:text-green"
+            : "cursor-pointer hover:border-text hover:bg-ink hover:text-green"
       }`}
     >
       {children}

@@ -138,7 +138,7 @@ export function RegistrarUsuarioModal({
         <div className="flex items-center gap-3 rounded-[var(--radius-md)] border border-border bg-bg px-3.5 py-3">
           <span
             aria-hidden
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-text text-[12px] font-semibold text-green"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-ink text-[12px] font-semibold text-green"
           >
             {iniciales}
           </span>

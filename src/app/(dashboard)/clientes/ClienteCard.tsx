@@ -54,7 +54,7 @@ export function ClienteCard({ cliente, onOpen, onEdit }: { cliente: Cliente; onO
             event.stopPropagation();
             onEdit();
           }}
-          className="flex h-[30px] w-[30px] flex-shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-border bg-transparent text-text-2 transition-colors hover:border-text hover:bg-text hover:text-green"
+          className="flex h-[30px] w-[30px] flex-shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-border bg-transparent text-text-2 transition-colors hover:border-text hover:bg-ink hover:text-green"
         >
           <Pencil size={14} strokeWidth={1.8} />
         </button>

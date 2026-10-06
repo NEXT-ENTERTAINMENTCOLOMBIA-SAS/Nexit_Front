@@ -454,7 +454,7 @@ export default function UsuariosPage() {
                     <Td>
                       <div className="flex items-center gap-2.5">
                         <div className="relative">
-                          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-text text-[11px] font-semibold text-green">
+                          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-ink text-[11px] font-semibold text-green">
                             {inicialesPersona(u.nombre, u.apellido)}
                           </div>
                           {enLinea && (

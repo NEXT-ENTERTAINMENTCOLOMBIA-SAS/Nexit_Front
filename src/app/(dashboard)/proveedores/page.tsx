@@ -363,7 +363,7 @@ export default function ProveedoresPage() {
           className="min-h-[80px] cursor-pointer rounded-[var(--radius-lg)] border border-border bg-surface px-4 py-3.5 text-left transition-colors hover:border-text"
         >
           <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-text-3">Inactivos</div>
-          <div className="mt-1.5 text-[28px] font-semibold leading-none tracking-[-0.03em]" style={{ color: "#8A2525" }}>
+          <div className="mt-1.5 text-[28px] font-semibold leading-none tracking-[-0.03em]" style={{ color: "var(--red)" }}>
             {stats.inactivos}
           </div>
         </button>

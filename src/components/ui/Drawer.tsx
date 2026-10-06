@@ -91,7 +91,7 @@ export function DrawerIconButton({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="flex h-9 w-9 flex-shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-border bg-transparent text-text transition-colors hover:border-text hover:bg-text hover:text-green"
+      className="flex h-9 w-9 flex-shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border border-border bg-transparent text-text transition-colors hover:border-text hover:bg-ink hover:text-green"
     >
       {children}
     </button>
