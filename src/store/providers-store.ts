@@ -36,7 +36,9 @@ export const useProvidersStore = create<ProvidersState>((set, get) => ({
       // `loaded` se queda en false a propósito: sin esto, un fetchAll que
       // falla deja loading en true para siempre y la guarda de arriba nunca
       // vuelve a intentar.
-      set({ loading: false, error: err instanceof Error ? err.message : "No se pudieron cargar los proveedores." });
+      // Si ya hay datos en pantalla (p. ej. falló una actualización automática en segundo plano), se conservan
+      // y no se muestra la pantalla de error: esa solo aparece cuando no hay nada que mostrar.
+      set((state) => ({ loading: false, error: state.items.length > 0 ? null : err instanceof Error ? err.message : "No se pudieron cargar los proveedores." }));
     }
   },
   refresh: async () => {

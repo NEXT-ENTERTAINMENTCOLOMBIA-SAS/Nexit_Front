@@ -50,7 +50,7 @@ export function ProviderCard({
         {categoriaNombre && <Tag>{categoriaNombre}</Tag>}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-[#EFEDE7] pt-3">
+      <div className="flex flex-wrap items-center gap-2 border-t border-divider pt-3">
         <span className="min-w-0 flex-1 truncate text-xs text-text-3">{provider.contacto || "Sin contacto"}</span>
         <button
           type="button"

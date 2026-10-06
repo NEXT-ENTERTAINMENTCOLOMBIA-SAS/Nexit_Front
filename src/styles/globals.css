@@ -49,8 +49,51 @@
   --success-light: #e4f9ee;
 
   --gray-light: #f1efe8;
+  --divider: #efede7; /* líneas suaves entre filas */
+  --soft: #fbfaf7; /* fondo apenas distinto del blanco */
+  --hover-bg: #f4f3ef; /* fondo al pasar el cursor */
   --radius: 3px;
   --radius-lg: 4px;
+}
+
+/* ==========================================================================
+   Modo oscuro (2026-10-05). Se activa con data-theme="dark" en <html> (botón en el menú de la
+   cuenta; ver lib/use-theme.ts). Solo redefine los mismos tokens: nada se rediseña. Los colores
+   de estado (chips de Activo/En curso, etc.) conservan su fondo claro a propósito para seguir
+   legibles. Los pocos colores escritos a mano en componentes sueltos quedan claros: se irán
+   pasando a tokens a medida que se toquen esas pantallas.
+   ========================================================================== */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121210;
+  --surface: #1b1b19;
+  --border: #2e2d29;
+  --border-strong: #45433d;
+  --text: #f2f0ea;
+  --text-2: #c2bfb6;
+  --text-3: #98948a;
+  --teal-mid: #4a4a45;
+  --teal: #5c5c56;
+  --teal-light: #262522;
+  --blue: #7fb2ee;
+  --blue-light: #16283d;
+  --red: #f08a8a;
+  --red-light: #3a1c1c;
+  --amber: #e6b455;
+  --amber-light: #38290d;
+  --success: #4cd08e;
+  --success-light: #0f2e20;
+  --gray-light: #262522;
+  --divider: #262522;
+  --soft: #20201e;
+  --hover-bg: #262522;
+}
+:root[data-theme="dark"] input:focus-visible,
+:root[data-theme="dark"] select:focus-visible,
+:root[data-theme="dark"] textarea:focus-visible,
+:root[data-theme="dark"] button:focus-visible,
+:root[data-theme="dark"] a:focus-visible {
+  outline-color: var(--green);
 }
 
 @theme inline {
@@ -80,6 +123,9 @@
   --color-success-light: var(--success-light);
 
   --color-gray-light: var(--gray-light);
+  --color-divider: var(--divider);
+  --color-soft: var(--soft);
+  --color-hover-bg: var(--hover-bg);
 
   --radius-md: var(--radius);
   --radius-lg: var(--radius-lg);

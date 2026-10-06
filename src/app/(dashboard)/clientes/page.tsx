@@ -1,5 +1,7 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
+import { useLiveRefresh } from "@/lib/use-live-refresh";
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Building2, LayoutGrid, Pencil, Rows3 } from "lucide-react";
 import {
@@ -16,7 +18,7 @@ import {
   type FilterChip,
 } from "@/components/ui/primitives";
 import { DeleteOrRequestButton } from "@/components/ui/DeleteAction";
-import { Spinner } from "@/components/ui/Spinner";
+import { SkeletonCards } from "@/components/ui/Skeleton";
 import { RowAction, Table, Td, Th, Thead, Tr } from "@/components/ui/Table";
 import { CLIENTE_ESTADOS, CLIENT_STATUS_COLORS, statusColor } from "@/lib/constants";
 import { useAuthStore } from "@/store/auth-store";
@@ -88,7 +90,16 @@ export default function ClientesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Cliente | null>(null);
   const [pendingAdjuntos, setPendingAdjuntos] = useState<PendingAttachment[]>([]);
+  // Cambios de otras personas: se actualiza al volver a la pestaña y cada minuto.
+  useLiveRefresh(() => void refresh());
   const [detailId, setDetailId] = useState<string | null>(null);
+  // Abrir un registro desde el buscador global (Ctrl+K): /ruta?open=ID.
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const openId = searchParams.get("open");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deep-link desde el buscador global que abre el panel de detalle
+    if (openId) setDetailId(openId);
+  }, [searchParams]);
 
   // Autoguardado de filtros (Alicia 2026-09-07): restaura lo que había
   // quedado filtrado/buscado la última vez en esta pantalla, en esta misma
@@ -389,9 +400,7 @@ export default function ClientesPage() {
       </div>
 
       {loading && clientes.length === 0 ? (
-        <div className="flex justify-center py-14 text-text-2">
-          <Spinner label="Cargando clientes…" />
-        </div>
+        <SkeletonCards columns={3} />
       ) : error ? (
         <EmptyState icon={AlertTriangle} title={error} tone="danger" action={{ label: "Reintentar", onClick: fetchAll }} />
       ) : filtered.length === 0 ? (

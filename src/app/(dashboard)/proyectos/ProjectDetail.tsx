@@ -25,6 +25,7 @@ import { proyectosApi } from "@/services/api/proyectos-service";
 import { usuariosApi } from "@/services/api/usuarios-service";
 import { useCatalogosStore } from "@/store/catalogos-store";
 import { useClientesStore } from "@/store/clientes-store";
+import { formatMoney } from "@/lib/money";
 import { useUiStore } from "@/store/ui-store";
 import type { HistorialCambio, Proveedor, Proyecto, SeguimientoProyecto } from "@/types/api";
 
@@ -175,6 +176,7 @@ export function ProjectDetail({
 
         <DetailBox title="Propuesta y facturación">
           <DetailRow k="Propuesta" v={project.propuestaEstado || "—"} />
+          {project.valor != null && <DetailRow k="Valor" v={formatMoney(project.valor, project.moneda)} />}
           <DetailRow k="Factura" v={facturaLabel} />
           {project.fechaPago && <DetailRow k="Fecha de pago" v={fmtDateLong(project.fechaPago.slice(0, 10))} />}
         </DetailBox>
@@ -198,7 +200,7 @@ export function ProjectDetail({
                 const sc = statusColor(PROVIDER_STATUS_COLORS, p.estado);
                 const catNombre = categoriasProveedor.find((c) => c.id === p.categoriaId)?.nombre;
                 return (
-                  <div key={p.id} className="flex items-center gap-2.5 border-b border-[#EFEDE7] py-2.5 last:border-b-0">
+                  <div key={p.id} className="flex items-center gap-2.5 border-b border-divider py-2.5 last:border-b-0">
                     <Avatar nombre={p.nombre} size="sm" />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px] font-medium">{p.nombre}</div>
@@ -330,7 +332,7 @@ function Bitacora({ proyectoId }: { proyectoId: string }) {
           {entradas.map((e) => {
             const ac = statusColor(AREA_SEGUIMIENTO_COLORS, e.area);
             return (
-              <div key={e.id} className="rounded-[var(--radius-md)] border border-[#EFEDE7] bg-bg px-3 py-2.5 text-[13px]">
+              <div key={e.id} className="rounded-[var(--radius-md)] border border-divider bg-bg px-3 py-2.5 text-[13px]">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge bg={ac.bg} color={ac.c}>
                     {e.area}

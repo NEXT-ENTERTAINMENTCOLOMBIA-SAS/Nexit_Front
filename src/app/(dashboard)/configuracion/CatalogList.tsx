@@ -133,7 +133,7 @@ export function CatalogList({
     <div className="flex flex-col gap-2">
       <div className="flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface shadow-[0_1px_3px_rgba(12,12,12,.04)] transition-shadow hover:shadow-[0_2px_10px_rgba(12,12,12,.07)]">
         {/* Agregar es la primera fila -- siempre a la vista, sin bajar con scroll (2026-09-10). */}
-        <div className="flex items-center gap-2 border-b border-[#EFEDE7] px-4 py-2.5" style={{ background: accentLight }}>
+        <div className="flex items-center gap-2 border-b border-divider px-4 py-2.5" style={{ background: accentLight }}>
           <Input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -149,7 +149,7 @@ export function CatalogList({
         </div>
 
         {items.length > BUSCADOR_DESDE && (
-          <div className="flex items-center gap-2 border-b border-[#EFEDE7] px-4 py-2">
+          <div className="flex items-center gap-2 border-b border-divider px-4 py-2">
             <Search size={13} strokeWidth={1.8} className="flex-shrink-0 text-text-3" />
             <input
               value={busqueda}
@@ -175,7 +175,7 @@ export function CatalogList({
           {visibles.map((item, idx) => (
           <div
             key={item.id}
-            className={`flex items-center gap-2 px-4 py-2.5 ${idx !== visibles.length - 1 ? "border-b border-[#EFEDE7]" : ""}`}
+            className={`flex items-center gap-2 px-4 py-2.5 ${idx !== visibles.length - 1 ? "border-b border-divider" : ""}`}
             style={selectable && selectedId === item.id ? { background: accentLight } : undefined}
           >
             {editingId === item.id ? (

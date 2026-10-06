@@ -578,7 +578,7 @@ export function Dropdown({
             className="fixed z-[61] flex max-h-[266px] w-max max-w-[min(290px,calc(100vw-24px))] flex-col overflow-y-auto rounded-[var(--radius-lg)] border border-text bg-surface p-[5px] shadow-[0_12px_34px_rgba(12,12,12,0.16)]"
           >
             {showSearch && (
-              <div className="sticky top-0 z-[1] -mx-[5px] -mt-[5px] mb-[5px] flex items-center gap-1.5 border-b border-[#EFEDE7] bg-surface px-[9px] py-[7px]">
+              <div className="sticky top-0 z-[1] -mx-[5px] -mt-[5px] mb-[5px] flex items-center gap-1.5 border-b border-divider bg-surface px-[9px] py-[7px]">
                 <Search size={13} strokeWidth={2} className="flex-shrink-0 text-text-3" />
                 <input
                   ref={searchRef}

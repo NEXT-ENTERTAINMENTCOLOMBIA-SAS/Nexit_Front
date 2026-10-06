@@ -21,6 +21,7 @@ import { proveedorAdjuntosApi } from "@/services/api/proveedor-adjuntos-service"
 import { historialApi } from "@/services/api/historial-service";
 import { useAuthStore } from "@/store/auth-store";
 import { useCatalogosStore } from "@/store/catalogos-store";
+import { formatMoney } from "@/lib/money";
 import { useProvidersStore } from "@/store/providers-store";
 import { useUiStore } from "@/store/ui-store";
 import type { HistorialCambio, Proveedor } from "@/types/api";
@@ -279,10 +280,14 @@ export function ProviderDetail({
           />
         </DetailBox>
 
-        {(provider.aforo != null || provider.costoReferencia) && (
+        {(provider.aforo != null || provider.costoReferencia || provider.costoReferenciaValor != null) && (
           <DetailBox title="Detalles adicionales">
             {provider.aforo != null && <DetailRow k="Aforo" v={String(provider.aforo)} />}
-            {provider.costoReferencia && <DetailRow k="Costo de referencia" v={provider.costoReferencia} />}
+            {provider.costoReferenciaValor != null ? (
+              <DetailRow k="Costo de referencia" v={formatMoney(provider.costoReferenciaValor, provider.moneda)} />
+            ) : (
+              provider.costoReferencia && <DetailRow k="Costo de referencia" v={provider.costoReferencia} />
+            )}
           </DetailBox>
         )}
 

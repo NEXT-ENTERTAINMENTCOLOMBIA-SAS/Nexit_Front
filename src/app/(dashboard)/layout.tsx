@@ -5,7 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useConfigStore } from "@/store/config-store";
 import clsx from "clsx";
-import { ChevronLeft, ChevronRight, LogOut, Network, Plus, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, Moon, Network, Plus, Search, Sun } from "lucide-react";
+import { CommandPalette } from "@/components/ui/CommandPalette";
+import { useTheme } from "@/lib/use-theme";
 import { presenciaApi } from "@/services/api/presencia-service";
 import { useAuthStore } from "@/store/auth-store";
 import { usePageToolbarStore, type SearchSuggestion } from "@/store/page-toolbar-store";
@@ -32,6 +34,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Desplegable de sugerencias del buscador global (Alicia 2026-09-18): cada página aporta su
   // propia lógica de "qué es una sugerencia" vía toolbar.getSuggestions (ver page-toolbar-store.ts).
   const [suggestOpen, setSuggestOpen] = useState(false);
+  // Buscador global Ctrl+K / ⌘K y modo oscuro (2026-10-05).
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const { tema, alternar: alternarTema } = useTheme();
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -131,6 +136,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     () => (toolbar?.getSuggestions && globalSearch.trim() ? toolbar.getSuggestions(globalSearch.trim()) : []),
     [toolbar, globalSearch],
   );
+
+  // Ctrl+K / ⌘K abre el buscador global desde cualquier pantalla.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // "cargando" incluido a propósito: hasta saber si tiene perfil no se pinta el dashboard, para
   // no mostrar medio segundo de interfaz a alguien que en realidad va camino a /registro.
@@ -278,7 +295,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </span>
           <span className="text-[15px] font-semibold tracking-tight text-text">Nexit</span>
         </Link>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(true)}
+            aria-label="Buscar en todo"
+            className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-border bg-surface text-text-2"
+          >
+            <Search size={15} strokeWidth={1.8} />
+          </button>
+          <button
+            type="button"
+            onClick={alternarTema}
+            aria-label={tema === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-border bg-surface text-text-2"
+          >
+            {tema === "dark" ? <Sun size={15} strokeWidth={1.8} /> : <Moon size={15} strokeWidth={1.8} />}
+          </button>
           <NotificationsBell />
         </div>
       </div>
@@ -313,7 +346,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   role="option"
                   aria-selected={false}
                   onClick={() => handleSelectSuggestion(s)}
-                  className="flex w-full flex-col gap-0.5 border-b border-[#EFEDE7] px-3.5 py-2.5 text-left transition-colors last:border-b-0 hover:bg-[#F4F3EF]"
+                  className="flex w-full flex-col gap-0.5 border-b border-divider px-3.5 py-2.5 text-left transition-colors last:border-b-0 hover:bg-hover-bg"
                 >
                   <span className="text-[13px] font-medium text-text">{s.label}</span>
                   {s.sublabel && <span className="text-[11.5px] text-text-2">{s.sublabel}</span>}
@@ -323,6 +356,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
         </div>
         <div className="ml-auto flex flex-shrink-0 items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setPaletteOpen(true)}
+            aria-label="Abrir buscador global"
+            title="Buscar en todo (Ctrl+K)"
+            className="hidden h-9 items-center gap-2 rounded-[var(--radius-md)] border border-border bg-surface px-2.5 text-[12px] text-text-3 transition-colors hover:border-border-strong hover:text-text min-[1001px]:flex"
+          >
+            <Search size={14} strokeWidth={1.8} />
+            <span>Buscar en todo</span>
+            <kbd className="rounded border border-border px-1 font-mono text-[10px]">Ctrl K</kbd>
+          </button>
+          <button
+            type="button"
+            onClick={alternarTema}
+            aria-label={tema === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            title={tema === "dark" ? "Modo claro" : "Modo oscuro"}
+            className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-border bg-surface text-text-2 transition-colors hover:border-border-strong hover:text-text"
+          >
+            {tema === "dark" ? <Sun size={15} strokeWidth={1.8} /> : <Moon size={15} strokeWidth={1.8} />}
+          </button>
           <NotificationsBell />
           {toolbar && (
             <>
@@ -347,6 +400,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className={styles.main}>{children}</main>
 
       <MobileNav />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }

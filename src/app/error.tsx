@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
 import { NexitWordmark } from "@/components/ui/Logo";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { reportarError } from "@/lib/monitoring";
 
 /**
  * Red de seguridad del segmento raíz -- atrapa errores no controlados en
@@ -26,6 +27,7 @@ export default function RootError({
     // fiable para diagnosticar es el digest, que sí queda en los logs del
     // servidor.
     console.error("[Nexit] Error no controlado:", error);
+    reportarError(error);
   }, [error]);
 
   return (

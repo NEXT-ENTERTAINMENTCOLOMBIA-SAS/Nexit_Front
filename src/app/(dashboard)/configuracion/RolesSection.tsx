@@ -44,7 +44,7 @@ export function RolesSection() {
   return (
     <div className="flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface shadow-[0_1px_3px_rgba(12,12,12,.04)]">
       {ROLES.map((r, idx) => (
-        <div key={r} className={`flex items-start gap-3 px-4 py-3 ${idx !== ROLES.length - 1 ? "border-b border-[#EFEDE7]" : ""}`}>
+        <div key={r} className={`flex items-start gap-3 px-4 py-3 ${idx !== ROLES.length - 1 ? "border-b border-divider" : ""}`}>
           {editando === r ? (
             <>
               <div className="flex min-w-0 flex-1 flex-col gap-2">

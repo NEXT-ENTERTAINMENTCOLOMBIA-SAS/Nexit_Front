@@ -7,6 +7,8 @@ import { Dropdown } from "@/components/ui/primitives";
 import { DeleteOrRequestButton } from "@/components/ui/DeleteAction";
 import { EntityAttachments, type PendingAttachment } from "@/components/ui/EntityAttachments";
 import { Field, Input, Row, Textarea } from "@/components/ui/form";
+import { MoneyInput } from "@/components/ui/MoneyInput";
+import { montoANumero, numeroAMonto } from "@/lib/money";
 import { CLIENTE_ESTADOS } from "@/lib/constants";
 import { parseCSVFirstRow } from "@/lib/csv";
 import { clearFormDraft, readFormDraft, useFormDraftAutosave } from "@/lib/use-form-draft";
@@ -29,6 +31,8 @@ interface FormState {
   contacto: string;
   cargoContacto: string;
   valorReferencia: string;
+  valorMonto: string;
+  moneda: string;
   notas: string;
   telefonos: ClienteTelefono[];
   emails: ClienteEmail[];
@@ -48,6 +52,8 @@ const emptyForm: FormState = {
   contacto: "",
   cargoContacto: "",
   valorReferencia: "",
+  valorMonto: "",
+  moneda: "COP",
   notas: "",
   telefonos: [],
   emails: [],
@@ -111,6 +117,8 @@ export function ClienteFormModal({
           contacto: editing.contacto ?? "",
           cargoContacto: editing.cargoContacto ?? "",
           valorReferencia: editing.valorReferencia ?? "",
+          valorMonto: numeroAMonto(editing.valorReferenciaMonto),
+          moneda: editing.moneda ?? "COP",
           notas: editing.notas ?? "",
           telefonos: editing.telefonos.length > 0 ? editing.telefonos : [],
           emails: editing.emails.length > 0 ? editing.emails : [],
@@ -263,6 +271,8 @@ export function ClienteFormModal({
       contacto: form.contacto.trim() || null,
       cargoContacto: form.cargoContacto.trim() || null,
       valorReferencia: form.valorReferencia.trim() || null,
+      valorReferenciaMonto: montoANumero(form.valorMonto),
+      moneda: form.moneda,
       notas: form.notas.trim() || null,
       telefonos: form.telefonos.filter((t) => t.telefono.trim()),
       emails: form.emails.filter((e) => e.email.trim()),
@@ -474,6 +484,12 @@ export function ClienteFormModal({
         </FormDrawerSection>
 
         <FormDrawerSection number="04" title="Qué recordar">
+          <Field
+            label="Valor de referencia"
+            hint={!form.valorMonto && form.valorReferencia ? <span className="mt-1 block text-xs text-text-3">`Valor anterior escrito a mano: “${form.valorReferencia}”. Escríbelo aquí como número.`</span> : undefined}
+          >
+            <MoneyInput valor={form.valorMonto} moneda={form.moneda} onChange={(v, m) => setForm((f) => ({ ...f, valorMonto: v, moneda: m }))} />
+          </Field>
           <Field label="Notas internas">
             <Textarea
               value={form.notas}

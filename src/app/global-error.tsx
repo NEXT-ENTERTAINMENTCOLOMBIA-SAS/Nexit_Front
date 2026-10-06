@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { reportarError } from "@/lib/monitoring";
 import { AlertTriangle } from "lucide-react";
 import "@/styles/globals.css";
 import { NexitWordmark } from "@/components/ui/Logo";
@@ -26,6 +27,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error("[Nexit] Error crítico (root layout):", error);
+    reportarError(error);
   }, [error]);
 
   return (

@@ -131,8 +131,8 @@ export function NotificationsBell() {
         key={n.id}
         role="menuitem"
         className={clsx(
-          "group flex w-full items-start gap-3 border-b border-[#EFEDE7] px-3.5 py-3 text-left transition-colors last:border-b-0 hover:bg-[#F4F3EF]",
-          !n.leida && "bg-[#FBFAF7]",
+          "group flex w-full items-start gap-3 border-b border-divider px-3.5 py-3 text-left transition-colors last:border-b-0 hover:bg-hover-bg",
+          !n.leida && "bg-soft",
         )}
       >
         <button type="button" onClick={() => markRead(n)} className="flex min-w-0 flex-1 gap-3 text-left">

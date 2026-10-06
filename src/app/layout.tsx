@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "@/styles/globals.css";
 import { Toaster } from "@/components/ui/Toaster";
+import { MonitoreoInit } from "@/components/ui/MonitoreoInit";
+import { SCRIPT_TEMA } from "@/lib/use-theme";
 
 // Archivo (headings/body) + IBM Plex Mono (eyebrow labels, mono data) --
 // ported 2026-08-28 from the approved Claude Diseño mockup, replacing the
@@ -40,10 +42,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${archivo.variable} ${plexMono.variable}`}>
+    <html lang="es" className={`${archivo.variable} ${plexMono.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+      </head>
       <body>
         {children}
         <Toaster />
+        <MonitoreoInit />
       </body>
     </html>
   );

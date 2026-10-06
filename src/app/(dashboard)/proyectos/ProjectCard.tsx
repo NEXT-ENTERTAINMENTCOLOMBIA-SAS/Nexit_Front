@@ -55,7 +55,7 @@ export function ProjectCard({ project, onOpen, onEdit }: { project: Proyecto; on
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-[#EFEDE7] pt-3">
+      <div className="flex flex-wrap items-center gap-2 border-t border-divider pt-3">
         <Badge bg={st.bg} color={st.c}>
           {estadoNombre}
         </Badge>

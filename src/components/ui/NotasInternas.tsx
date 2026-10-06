@@ -115,7 +115,7 @@ export function NotasInternasCliente({ clienteId }: { clienteId: string }) {
             const ac = statusColor(AREA_SEGUIMIENTO_COLORS, n.area);
             const puedeBorrar = esAdmin || (n.autorId != null && n.autorId === user?.id);
             return (
-              <div key={n.id} className="rounded-[var(--radius-md)] border border-[#EFEDE7] bg-bg px-3 py-2.5 text-[13px]">
+              <div key={n.id} className="rounded-[var(--radius-md)] border border-divider bg-bg px-3 py-2.5 text-[13px]">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge bg={ac.bg} color={ac.c}>{n.area}</Badge>
                   <span className="text-[12px] text-text-3">{n.autorNombre || "Cuenta eliminada"}</span>

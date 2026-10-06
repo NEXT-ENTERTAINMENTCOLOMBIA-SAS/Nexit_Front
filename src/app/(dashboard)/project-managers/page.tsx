@@ -5,7 +5,7 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 import { AlertTriangle, Building2, ChevronDown, ExternalLink, Folders, Truck, UserRound } from "lucide-react";
 import { Avatar, Badge, EmptyState, StatCard, TabButton, TabsShell } from "@/components/ui/primitives";
-import { Spinner } from "@/components/ui/Spinner";
+import { SkeletonCards } from "@/components/ui/Skeleton";
 import { PROJECT_STATUS_COLORS, statusColor } from "@/lib/constants";
 import { panelApi } from "@/services/api/panel-service";
 import { useAuthStore } from "@/store/auth-store";
@@ -30,7 +30,7 @@ function Lista({ items, vacio }: { items: { nombre: string; proyectos: number }[
   return (
     <ul className="grid max-h-[300px] grid-cols-1 gap-x-8 overflow-y-auto sm:grid-cols-2 min-[1200px]:grid-cols-3">
       {items.map((it) => (
-        <li key={it.nombre} className="flex items-center justify-between gap-3 border-b border-[#EFEDE7] py-2 text-[13px]">
+        <li key={it.nombre} className="flex items-center justify-between gap-3 border-b border-divider py-2 text-[13px]">
           <span className="truncate">{it.nombre}</span>
           <span className="flex-shrink-0 font-mono text-[11px] text-text-3">{it.proyectos}</span>
         </li>
@@ -51,7 +51,7 @@ function FilaProjectManager({ pm, sinAsignar = false }: { pm: PanelPmProjectMana
   ];
 
   return (
-    <div className="border-b border-[#EFEDE7] last:border-b-0">
+    <div className="border-b border-divider last:border-b-0">
       <button
         type="button"
         onClick={() => setAbierta((v) => !v)}
@@ -96,7 +96,7 @@ function FilaProjectManager({ pm, sinAsignar = false }: { pm: PanelPmProjectMana
                 {pm.proyectos.slice(0, MAX_PROYECTOS).map((p) => {
                   const color = statusColor(PROJECT_STATUS_COLORS, p.estado);
                   return (
-                    <li key={p.id} className="flex items-center gap-3 border-b border-[#EFEDE7] py-2 text-[13px]">
+                    <li key={p.id} className="flex items-center gap-3 border-b border-divider py-2 text-[13px]">
                       <Link href={`/proyectos?open=${p.id}`} className="group flex min-w-0 flex-1 items-center gap-1.5 hover:underline">
                         <span className="min-w-0">
                           <span className="block truncate font-medium">{p.nombre}</span>
@@ -176,9 +176,7 @@ export default function ProjectManagersPage() {
       <h1 className={styles.h1}>{esAdmin ? "Project Managers" : "Mis proyectos"}</h1>
 
       {loading && !panel ? (
-        <div className="flex justify-center py-14 text-text-2">
-          <Spinner label="Cargando…" />
-        </div>
+        <SkeletonCards columns={3} />
       ) : error && !panel ? (
         <EmptyState icon={UserRound} tone="danger" title="No se pudo cargar el panel de Project Managers." action={{ label: "Reintentar", onClick: cargar }} />
       ) : panel ? (

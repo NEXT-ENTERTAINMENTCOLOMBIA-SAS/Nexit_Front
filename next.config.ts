@@ -26,7 +26,16 @@ const isDev = process.env.NODE_ENV === "development";
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5031";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 
-const connectSrc = ["'self'", apiBaseUrl, supabaseUrl].filter(Boolean).join(" ");
+// Monitoreo de errores (Sentry): solo si hay DSN se permite enviar a su servidor de ingesta.
+const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN ?? "";
+let sentryOrigin = "";
+try {
+  sentryOrigin = sentryDsn ? new URL(sentryDsn).origin : "";
+} catch {
+  sentryOrigin = "";
+}
+
+const connectSrc = ["'self'", apiBaseUrl, supabaseUrl, sentryOrigin].filter(Boolean).join(" ");
 
 const cspHeader = `
   default-src 'self';

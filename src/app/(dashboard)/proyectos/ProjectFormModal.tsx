@@ -7,6 +7,8 @@ import { DeleteOrRequestButton } from "@/components/ui/DeleteAction";
 import { EntityAttachments, type PendingAttachment } from "@/components/ui/EntityAttachments";
 import { Button, Dropdown, type DropdownGroup } from "@/components/ui/primitives";
 import { Field, Input, Row, Textarea } from "@/components/ui/form";
+import { MoneyInput } from "@/components/ui/MoneyInput";
+import { montoANumero, numeroAMonto } from "@/lib/money";
 import { parseCSVFirstRow } from "@/lib/csv";
 import { clearFormDraft, readFormDraft, useFormDraftAutosave } from "@/lib/use-form-draft";
 import { useAuthStore } from "@/store/auth-store";
@@ -40,6 +42,8 @@ interface FormState {
   porcentajeAvance: number;
   propuestaEstado: string;
   numeroFactura: string;
+  valorMonto: string;
+  moneda: string;
   pagado: boolean;
   fechaPago: string;
   notas: string;
@@ -61,6 +65,8 @@ const emptyForm: FormState = {
   porcentajeAvance: 0,
   propuestaEstado: PROPUESTA_ESTADOS[0],
   numeroFactura: "",
+  valorMonto: "",
+  moneda: "COP",
   pagado: false,
   fechaPago: "",
   notas: "",
@@ -175,6 +181,8 @@ export function ProjectFormModal({
           porcentajeAvance: editing.porcentajeAvance,
           propuestaEstado: editing.propuestaEstado,
           numeroFactura: editing.numeroFactura ?? "",
+          valorMonto: numeroAMonto(editing.valor),
+          moneda: editing.moneda ?? "COP",
           pagado: editing.pagado,
           fechaPago: editing.fechaPago?.slice(0, 10) ?? "",
           notas: editing.notas ?? "",
@@ -325,6 +333,8 @@ export function ProjectFormModal({
       porcentajeAvance: form.porcentajeAvance,
       propuestaEstado: form.propuestaEstado,
       numeroFactura: form.numeroFactura.trim() || null,
+      valor: montoANumero(form.valorMonto),
+      moneda: form.moneda,
       pagado: form.pagado,
       fechaPago: form.fechaPago || null,
       notas: form.notas.trim() || null,
@@ -460,6 +470,9 @@ export function ProjectFormModal({
               Pagado
             </label>
           </Row>
+          <Field label="Valor del proyecto">
+            <MoneyInput valor={form.valorMonto} moneda={form.moneda} onChange={(v, m) => setForm((f) => ({ ...f, valorMonto: v, moneda: m }))} />
+          </Field>
           {/* Alicia 2026-09-09: "número de factura y fecha de pago pueden ir uno al lado del otro". */}
           <Row cols={2}>
             <Field label="N.º de factura">

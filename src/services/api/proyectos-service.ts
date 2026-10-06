@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api-client";
-import type { ImportarResultado, Proyecto, ProyectoInput, ProyectoPrioridad, SeguimientoProyecto, SeguimientoProyectoInput } from "@/types/api";
+import type { FiltrosPaginaProyectos, ImportarResultado, Proyecto, ProyectosPagina, ProyectoInput, ProyectoPrioridad, SeguimientoProyecto, SeguimientoProyectoInput } from "@/types/api";
 
 /**
  * Conecta contra ProyectosController real (Nexit_Back). DELETE requiere
@@ -12,6 +12,19 @@ import type { ImportarResultado, Proyecto, ProyectoInput, ProyectoPrioridad, Seg
  */
 export const proyectosApi = {
   list: () => apiClient.get<Proyecto[]>("/api/proyectos"),
+  /** Una página ya filtrada en el servidor + conteos globales (2026-10-05): no baja todos los proyectos. */
+  pagina: (f: FiltrosPaginaProyectos) => {
+    const p = new URLSearchParams();
+    if (f.q?.trim()) p.set("q", f.q.trim());
+    if (f.estadoId) p.set("estadoId", f.estadoId);
+    if (f.clienteId) p.set("clienteId", f.clienteId);
+    if (f.tipo) p.set("tipo", f.tipo);
+    if (f.gerenteId) p.set("gerenteId", f.gerenteId);
+    if (f.alerta) p.set("alerta", f.alerta);
+    p.set("page", String(f.page ?? 1));
+    p.set("pageSize", String(f.pageSize ?? 12));
+    return apiClient.get<ProyectosPagina>(`/api/proyectos/pagina?${p.toString()}`);
+  },
   getById: (id: string) => apiClient.get<Proyecto>(`/api/proyectos/${id}`),
   /** "A qué proyecto atender primero" (docs/21, docs/22). */
   prioridad: () => apiClient.get<ProyectoPrioridad[]>("/api/proyectos/prioridad"),

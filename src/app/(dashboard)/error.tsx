@@ -1,5 +1,6 @@
 "use client";
 
+import { reportarError } from "@/lib/monitoring";
 import { useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -19,6 +20,7 @@ export default function DashboardError({
 }) {
   useEffect(() => {
     console.error("[Nexit] Error en el panel:", error);
+    reportarError(error);
   }, [error]);
 
   return (

@@ -21,6 +21,7 @@ import { clienteAdjuntosApi } from "@/services/api/cliente-adjuntos-service";
 import { historialApi } from "@/services/api/historial-service";
 import { useCatalogosStore } from "@/store/catalogos-store";
 import { useUiStore } from "@/store/ui-store";
+import { formatMoney } from "@/lib/money";
 import { toSafeHref } from "@/lib/url-safety";
 import type { Cliente, HistorialCambio, Proyecto } from "@/types/api";
 
@@ -142,6 +143,12 @@ export function ClienteDetail({
         >
           <DetailRow k="Persona" v={cliente.contacto || "—"} />
           <DetailRow k="Cargo" v={cliente.cargoContacto || "—"} />
+          {(cliente.valorReferenciaMonto != null || cliente.valorReferencia) && (
+            <DetailRow
+              k="Valor de referencia"
+              v={cliente.valorReferenciaMonto != null ? formatMoney(cliente.valorReferenciaMonto, cliente.moneda) : (cliente.valorReferencia ?? "—")}
+            />
+          )}
           {cliente.telefonos.length > 0 ? (
             cliente.telefonos.map((t, i) => (
               <DetailRow

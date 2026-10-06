@@ -7,6 +7,8 @@ import { Dropdown } from "@/components/ui/primitives";
 import { DeleteOrRequestButton } from "@/components/ui/DeleteAction";
 import { EntityAttachments, type PendingAttachment } from "@/components/ui/EntityAttachments";
 import { Field, Input, Row, Textarea } from "@/components/ui/form";
+import { MoneyInput } from "@/components/ui/MoneyInput";
+import { montoANumero, numeroAMonto } from "@/lib/money";
 import { StarRatingInput } from "@/components/ui/StarRating";
 import { PROVEEDOR_ESTADOS } from "@/lib/constants";
 import { parseCSVFirstRow } from "@/lib/csv";
@@ -29,6 +31,8 @@ interface FormState {
   direccion: string;
   aforo: string;
   costoReferencia: string;
+  costoMonto: string;
+  moneda: string;
   score: number;
   presupuesto: string;
   cobertura: string;
@@ -51,6 +55,8 @@ const emptyForm: FormState = {
   direccion: "",
   aforo: "",
   costoReferencia: "",
+  costoMonto: "",
+  moneda: "COP",
   score: 3,
   presupuesto: "",
   cobertura: "",
@@ -124,6 +130,8 @@ export function ProviderFormModal({
           direccion: editing.direccion ?? "",
           aforo: editing.aforo != null ? String(editing.aforo) : "",
           costoReferencia: editing.costoReferencia ?? "",
+          costoMonto: numeroAMonto(editing.costoReferenciaValor),
+          moneda: editing.moneda ?? "COP",
           score: editing.score ?? 3,
           presupuesto: editing.presupuesto ?? "",
           cobertura: editing.cobertura ?? "",
@@ -277,6 +285,8 @@ export function ProviderFormModal({
       direccion: form.direccion.trim() || null,
       aforo: form.aforo.trim() ? Number(form.aforo) : null,
       costoReferencia: form.costoReferencia.trim() || null,
+      costoReferenciaValor: montoANumero(form.costoMonto),
+      moneda: form.moneda,
       score: form.score,
       presupuesto: form.presupuesto.trim() || null,
       cobertura: form.cobertura.trim() || null,
@@ -502,6 +512,12 @@ export function ProviderFormModal({
         </FormDrawerSection>
 
         <FormDrawerSection number="04" title="Qué recordar">
+          <Field
+            label="Costo de referencia"
+            hint={!form.costoMonto && form.costoReferencia ? <span className="mt-1 block text-xs text-text-3">`Valor anterior escrito a mano: “${form.costoReferencia}”. Escríbelo aquí como número.`</span> : undefined}
+          >
+            <MoneyInput valor={form.costoMonto} moneda={form.moneda} onChange={(v, m) => setForm((f) => ({ ...f, costoMonto: v, moneda: m }))} />
+          </Field>
           {/* Alicia 2026-09-19: "eso no son todos los servicios que presta este proveedor... eso
               está mal, muchos proveedores están así -- quítalo" -- la lista de chips daba la
               impresión de ser el catálogo completo de servicios de ese proveedor cuando en

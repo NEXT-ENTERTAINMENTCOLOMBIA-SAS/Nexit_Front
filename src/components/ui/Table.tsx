@@ -17,7 +17,7 @@ export function Table({ children, footer }: { children: ReactNode; footer?: Reac
       <div className="overflow-x-auto">
         <table className="w-full min-w-[780px] border-collapse text-[13px]">{children}</table>
       </div>
-      {footer && <div className="border-t border-border bg-[#FBFAF7] px-4 py-3">{footer}</div>}
+      {footer && <div className="border-t border-border bg-soft px-4 py-3">{footer}</div>}
     </div>
   );
 }
@@ -40,7 +40,7 @@ export function Tr({ onClick, children }: { onClick?: () => void; children: Reac
   return (
     <tr
       onClick={onClick}
-      className={`border-b border-[#EFEDE7] last:border-b-0 ${onClick ? "cursor-pointer hover:bg-[#F9F8F5]" : ""}`}
+      className={`border-b border-divider last:border-b-0 ${onClick ? "cursor-pointer hover:bg-[#F9F8F5]" : ""}`}
     >
       {children}
     </tr>

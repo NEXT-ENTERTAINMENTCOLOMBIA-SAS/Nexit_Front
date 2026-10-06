@@ -322,7 +322,7 @@ export function EntityAttachments<T extends AttachmentLike>({
           return (
             <div
               key={a.id}
-              className="flex items-center gap-2.5 rounded-[var(--radius-md)] border border-[#EFEDE7] bg-[#FBFAF7] px-3 py-2.5 transition-colors hover:border-border"
+              className="flex items-center gap-2.5 rounded-[var(--radius-md)] border border-divider bg-soft px-3 py-2.5 transition-colors hover:border-border"
             >
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gray-light">
                 <Icon size={15} strokeWidth={1.75} className="text-text-2" />

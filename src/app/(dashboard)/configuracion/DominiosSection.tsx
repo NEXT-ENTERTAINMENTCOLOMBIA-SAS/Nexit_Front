@@ -60,14 +60,14 @@ export function DominiosSection() {
 
   return (
     <div className="flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface shadow-[0_1px_3px_rgba(12,12,12,.04)]">
-      <div className="flex items-center gap-2 border-b border-[#EFEDE7] bg-gray-light px-4 py-2.5">
+      <div className="flex items-center gap-2 border-b border-divider bg-gray-light px-4 py-2.5">
         <Input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="ejemplo.com" aria-label="Nuevo dominio" className="h-9 flex-1 bg-surface" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); agregar(); } }} />
         <RowAction label="Agregar" onClick={agregar} disabled={saving || !draft.trim()}><Plus size={14} strokeWidth={2} /></RowAction>
       </div>
       {items === null && <div className="px-4 py-3.5 text-sm text-text-3">Cargando…</div>}
       {items?.length === 0 && <div className="px-4 py-3.5 text-sm text-text-3">Sin dominios todavía.</div>}
       {items?.map((d, i) => (
-        <div key={d.id} className={`flex items-center gap-2 px-4 py-2.5 ${i !== items.length - 1 ? "border-b border-[#EFEDE7]" : ""}`}>
+        <div key={d.id} className={`flex items-center gap-2 px-4 py-2.5 ${i !== items.length - 1 ? "border-b border-divider" : ""}`}>
           <span className="min-w-0 flex-1 truncate font-mono text-[13px]">@{d.dominio}</span>
           <RowAction label="Eliminar" tone="danger" onClick={() => setToDelete(d)}><Trash2 size={13} strokeWidth={1.8} /></RowAction>
         </div>

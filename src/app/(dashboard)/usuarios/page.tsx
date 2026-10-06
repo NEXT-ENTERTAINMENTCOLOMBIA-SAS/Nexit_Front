@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Check, MailPlus, Pencil, Send, ShieldQuestion, Trash2, UserPlus, Users, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Pencil, Trash2, UserPlus, Users } from "lucide-react";
 import {
   ActiveFilters,
   Badge,
-  Button,
   Dropdown,
   EmptyState,
   StatCard,
@@ -20,8 +19,7 @@ import {
   ROLES,
   ROL_COLORS,
   } from "@/lib/constants";
-import { haceCuanto, inicialesPersona } from "@/lib/format";
-import { fmtFechaHora } from "@/lib/historial";
+import { inicialesPersona } from "@/lib/format";
 import { invitacionesApi } from "@/services/api/invitaciones-service";
 import { presenciaApi } from "@/services/api/presencia-service";
 import { solicitudesEliminacionApi } from "@/services/api/solicitudes-eliminacion-service";
@@ -37,7 +35,6 @@ import type {
   PresenciaUsuario,
   Rol,
   SolicitudEliminacion,
-  TipoEntidadEliminable,
   Usuario,
   UsuarioUpdateInput,
 } from "@/types/api";
@@ -45,29 +42,10 @@ import { InvitarUsuarioModal } from "./InvitarUsuarioModal";
 import { RegistrarUsuarioModal } from "./RegistrarUsuarioModal";
 import { UsuarioDetail } from "./UsuarioDetail";
 import { UsuarioFormModal } from "./UsuarioFormModal";
+import { InvitacionesSection } from "./InvitacionesSection";
+import { SolicitudesSection } from "./SolicitudesSection";
 import styles from "@/styles/dashboard.module.css";
 import { useRolLabels } from "@/store/config-store";
-
-const ENTIDAD_LABELS: Record<TipoEntidadEliminable, string> = {
-  cliente: "Cliente",
-  proveedor: "Proveedor",
-  proyecto: "Proyecto",
-  usuario: "Usuario",
-};
-
-/**
- * Los estados de una solicitud de eliminación (Nexit_Back/docs/11, sección 9). Solo
- * `pendiente_admin` espera una decisión de quien está mirando esta pantalla: `pendiente_gerente`
- * espera al gerente responsable de ESE proyecto, y las otras dos ya terminaron su camino. Antes los
- * botones de aprobar/rechazar salían en todas las filas por igual, así que en tres de los cuatro
- * estados el clic solo servía para recibir un error del backend.
- */
-const SOLICITUD_ESTADOS: Record<string, { label: string; bg: string; c: string }> = {
-  pendiente_gerente: { label: "Espera al gerente", bg: "#FBF0DC", c: "#7A4E00" },
-  pendiente_admin: { label: "Espera tu decisión", bg: "#E6F1FB", c: "#0C447C" },
-  aprobada: { label: "Aprobada", bg: "#E4F9EE", c: "#036B3C" },
-  rechazada: { label: "Rechazada", bg: "#FCEBEB", c: "#791F1F" },
-};
 
 // Las mismas dos palabras que la columna "Estado de la cuenta" de la tabla -- si el filtro las
 // dijera de otra forma ("con acceso" / "sin acceso"), habría que traducir mentalmente entre lo que
@@ -88,49 +66,6 @@ type Confirmacion =
   | { tipo: "cancelarInvitacion"; invitacion: Invitacion }
   | { tipo: "aprobarSolicitud"; solicitud: SolicitudEliminacion; nombre: string }
   | { tipo: "rechazarSolicitud"; solicitud: SolicitudEliminacion; nombre: string };
-
-/**
- * Encabezado de las dos secciones de abajo. Existe para que "Invitaciones pendientes" y
- * "Solicitudes de eliminación" se lean como dos bloques hermanos con el mismo peso -- antes uno
- * era un título con un botón al lado y el otro un texto suelto, y la pantalla parecía tres cosas
- * distintas pegadas en vez de una.
- */
-function SeccionHeader({
-  icon: Icon,
-  titulo,
-  descripcion,
-  conteo,
-  accion,
-}: {
-  icon: typeof Users;
-  titulo: string;
-  /** Solo cuando el título y las columnas de abajo no bastan para decir de qué se trata la sección. */
-  descripcion?: string;
-  conteo?: number;
-  accion?: ReactNode;
-}) {
-  return (
-    <div className="mb-2.5 flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-start gap-2.5">
-        <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-border bg-surface text-text-2">
-          <Icon size={15} strokeWidth={1.8} />
-        </span>
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-[15px] font-semibold leading-tight">{titulo}</h2>
-            {conteo !== undefined && conteo > 0 && (
-              <span className="rounded-[20px] bg-text px-[7px] py-[2px] font-mono text-[10px] font-medium text-green">
-                {conteo}
-              </span>
-            )}
-          </div>
-          {descripcion && <div className="mt-0.5 text-[12px] text-text-3">{descripcion}</div>}
-        </div>
-      </div>
-      {accion}
-    </div>
-  );
-}
 
 export default function UsuariosPage() {
   const rolLabels = useRolLabels();
@@ -597,194 +532,27 @@ export default function UsuariosPage() {
         </div>
       )}
 
-      {/* --- Invitaciones ------------------------------------------------- */}
       {esAdmin && (
-        <div className="mb-9">
-          <SeccionHeader
-            icon={MailPlus}
-            titulo="Invitaciones pendientes"
-            descripcion="Ya recibieron el correo, pero todavía no han creado su perfil."
-            conteo={invitacionesPendientes.length}
-            accion={
-              <Button variant="primary" icon={Send} onClick={() => setInvitarOpen(true)}>
-                Invitar usuarios
-              </Button>
-            }
-          />
-
-          {invitacionesVisibles.length === 0 ? (
-            <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-surface px-5 py-9 text-center">
-              <MailPlus size={24} strokeWidth={1.5} className="mx-auto mb-2 text-text-3" />
-              <div className="text-[13px] text-text-2">No hay invitaciones esperando respuesta.</div>
-              <div className="mt-1 text-[12px] text-text-3">
-                Con “Invitar” puedes mandar varios correos de una vez, o subir una lista desde Excel.
-              </div>
-            </div>
-          ) : (
-            <Table
-              footer={
-                invitaciones.length > invitacionesPendientes.length ? (
-                  <button
-                    type="button"
-                    onClick={() => setVerInvitacionesRespondidas((v) => !v)}
-                    className="cursor-pointer text-[12px] text-text-2 underline-offset-2 hover:underline"
-                  >
-                    {verInvitacionesRespondidas
-                      ? "Ver solo las que siguen pendientes"
-                      : `Ver también las ${invitaciones.length - invitacionesPendientes.length} ya respondidas`}
-                  </button>
-                ) : undefined
-              }
-            >
-              <Thead>
-                <Th>Correo invitado</Th>
-                <Th className="text-center">Rol propuesto</Th>
-                <Th className="text-center">Invitada por</Th>
-                <Th className="text-center">Enviada</Th>
-                <Th className="text-center">Acciones</Th>
-              </Thead>
-              <tbody>
-                {invitacionesVisibles.map((i) => {
-                  const rolColor = ROL_COLORS[i.rol];
-                  const pendiente = i.estado === "Pendiente";
-                  return (
-                    <Tr key={i.id}>
-                      <Td>
-                        <div className="flex items-start gap-2.5">
-                          <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-gray-light text-text-2">
-                            <MailPlus size={14} strokeWidth={1.8} />
-                          </span>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="truncate font-medium">{i.email}</span>
-                              {!pendiente && <Tag>{i.estado}</Tag>}
-                            </div>
-                            {i.mensaje ? (
-                              <div className="mt-0.5 truncate text-[11px] italic text-text-3">“{i.mensaje}”</div>
-                            ) : (
-                              <div className="mt-0.5 text-[11px] text-text-3">Sin mensaje</div>
-                            )}
-                          </div>
-                        </div>
-                      </Td>
-                      <Td className="text-center">
-                        <Badge bg={rolColor.bg} color={rolColor.c}>
-                          {rolLabels[i.rol]}
-                        </Badge>
-                      </Td>
-                      <Td className="text-center text-text-2">{i.invitadoPorNombre ?? "—"}</Td>
-                      <Td className="text-center">
-                        <span title={fmtFechaHora(i.createdAt)} className="text-text-2">
-                          {haceCuanto(i.createdAt)}
-                        </span>
-                      </Td>
-                      <Td>
-                        <div className="flex justify-center">
-                          {pendiente ? (
-                            <RowAction
-                              label={`Cancelar la invitación a ${i.email}`}
-                              tone="danger"
-                              onClick={() => setConfirmacion({ tipo: "cancelarInvitacion", invitacion: i })}
-                            >
-                              <X size={13} strokeWidth={2} />
-                            </RowAction>
-                          ) : (
-                            <span className="text-[12px] text-text-3">
-                              {i.fechaRespuesta ? haceCuanto(i.fechaRespuesta) : "—"}
-                            </span>
-                          )}
-                        </div>
-                      </Td>
-                    </Tr>
-                  );
-                })}
-              </tbody>
-            </Table>
-          )}
-        </div>
+        <InvitacionesSection
+          invitaciones={invitaciones}
+          pendientes={invitacionesPendientes}
+          visibles={invitacionesVisibles}
+          verRespondidas={verInvitacionesRespondidas}
+          onToggleRespondidas={() => setVerInvitacionesRespondidas((v) => !v)}
+          rolLabels={rolLabels}
+          onInvitar={() => setInvitarOpen(true)}
+          onCancelar={(i) => setConfirmacion({ tipo: "cancelarInvitacion", invitacion: i })}
+        />
       )}
 
-      {/* --- Solicitudes de eliminación ------------------------------------ */}
-      <div>
-        <SeccionHeader
-          icon={ShieldQuestion}
-          titulo="Solicitudes de eliminación"
-          conteo={solicitudesPorDecidir.length}
-        />
-
-        {solicitudesVisibles.length === 0 ? (
-          <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-surface px-5 py-9 text-center">
-            <ShieldQuestion size={24} strokeWidth={1.5} className="mx-auto mb-2 text-text-3" />
-            <div className="text-[13px] text-text-2">Nadie ha pedido eliminar nada.</div>
-            <div className="mt-1 text-[12px] text-text-3">
-              Aquí llegan las solicitudes de clientes, proveedores, proyectos y cuentas del equipo.
-            </div>
-          </div>
-        ) : (
-          <Table>
-            <Thead>
-              <Th>Qué se quiere eliminar</Th>
-              <Th className="text-center">Solicitado por</Th>
-              <Th className="text-center">Motivo</Th>
-              <Th className="text-center">Estado</Th>
-              <Th className="text-center">Acciones</Th>
-            </Thead>
-            <tbody>
-              {solicitudesVisibles.map((s) => {
-                const nombre = entidadNombre(s);
-                const estado = SOLICITUD_ESTADOS[s.estado] ?? { label: s.estado, bg: "var(--gray-light)", c: "var(--text-2)" };
-                const meToca = s.estado === "pendiente_admin";
-                return (
-                  <Tr key={s.id}>
-                    <Td>
-                      <div className="flex items-center gap-2">
-                        <Tag>{ENTIDAD_LABELS[s.tipoEntidad]}</Tag>
-                        <span className="font-medium">{nombre}</span>
-                      </div>
-                      <div className="mt-0.5 pl-1 text-[11px] text-text-3">Solicitado {haceCuanto(s.createdAt)}</div>
-                    </Td>
-                    <Td className="text-center text-text-2">{usuarioNombre(s.solicitadoPorId)}</Td>
-                    <Td className="max-w-[240px] truncate text-center text-text-2" >
-                      {s.motivo || <span className="text-text-3">Sin motivo</span>}
-                    </Td>
-                    <Td className="text-center">
-                      <Badge bg={estado.bg} color={estado.c}>
-                        {estado.label}
-                      </Badge>
-                    </Td>
-                    <Td>
-                      <div className="flex justify-center gap-1.5">
-                        {meToca ? (
-                          <>
-                            <RowAction
-                              label={`Aprobar y eliminar ${nombre}`}
-                              onClick={() => setConfirmacion({ tipo: "aprobarSolicitud", solicitud: s, nombre })}
-                            >
-                              <Check size={13} strokeWidth={2} />
-                            </RowAction>
-                            <RowAction
-                              label={`Rechazar la solicitud sobre ${nombre}`}
-                              tone="danger"
-                              onClick={() => setConfirmacion({ tipo: "rechazarSolicitud", solicitud: s, nombre })}
-                            >
-                              <X size={13} strokeWidth={2} />
-                            </RowAction>
-                          </>
-                        ) : (
-                          // El estado (columna de al lado) ya dice por qué no hay nada que hacer acá
-                          // -- "Espera al gerente", "Aprobada", "Rechazada" -- repetirlo en Acciones
-                          // no agrega nada.
-                          <span className="text-[12px] text-text-3">—</span>
-                        )}
-                      </div>
-                    </Td>
-                  </Tr>
-                );
-              })}
-            </tbody>
-          </Table>
-        )}
-      </div>
+      <SolicitudesSection
+        solicitudes={solicitudesVisibles}
+        porDecidir={solicitudesPorDecidir.length}
+        entidadNombre={entidadNombre}
+        usuarioNombre={usuarioNombre}
+        onAprobar={(solicitud, nombre) => setConfirmacion({ tipo: "aprobarSolicitud", solicitud, nombre })}
+        onRechazar={(solicitud, nombre) => setConfirmacion({ tipo: "rechazarSolicitud", solicitud, nombre })}
+      />
 
       <InvitarUsuarioModal open={invitarOpen} onClose={() => setInvitarOpen(false)} onInvitado={load} />
       <RegistrarUsuarioModal open={registrarOpen} onClose={() => setRegistrarOpen(false)} onRegistrado={load} />

@@ -36,7 +36,9 @@ export const useClientesStore = create<ClientesState>((set, get) => ({
       const items = await clientesApi.list();
       set({ items, loading: false, loaded: true });
     } catch (err) {
-      set({ loading: false, error: err instanceof Error ? err.message : "No se pudieron cargar los clientes." });
+      // Si ya hay datos en pantalla (p. ej. falló una actualización automática en segundo plano), se conservan
+      // y no se muestra la pantalla de error: esa solo aparece cuando no hay nada que mostrar.
+      set((state) => ({ loading: false, error: state.items.length > 0 ? null : err instanceof Error ? err.message : "No se pudieron cargar los clientes." }));
     }
   },
   refresh: async () => {

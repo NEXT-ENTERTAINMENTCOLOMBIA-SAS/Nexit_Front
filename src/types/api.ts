@@ -43,7 +43,10 @@ export interface ClienteInput {
   web?: string | null;
   contacto?: string | null;
   cargoContacto?: string | null;
+  /** Texto libre histórico (antes del cambio a número); lo nuevo va en `valorReferenciaMonto` + `moneda`. */
   valorReferencia?: string | null;
+  valorReferenciaMonto?: number | null;
+  moneda?: string;
   notas?: string | null;
   telefonos: ClienteTelefono[];
   emails: ClienteEmail[];
@@ -113,7 +116,10 @@ export interface ProveedorInput {
   web?: string | null;
   direccion?: string | null;
   aforo?: number | null;
+  /** Texto libre histórico; lo nuevo va en `costoReferenciaValor` + `moneda`. */
   costoReferencia?: string | null;
+  costoReferenciaValor?: number | null;
+  moneda?: string;
   score?: number | null;
   presupuesto?: string | null;
   cobertura?: string | null;
@@ -193,6 +199,9 @@ export interface ProyectoInput {
   pagado: boolean;
   fechaPago?: string | null;
   notas?: string | null;
+  /** Valor del proyecto (numérico) y su moneda. */
+  valor?: number | null;
+  moneda?: string;
   /** Solo admin/super_admin puede asignarlo explícito; si un gerente no lo manda, el backend lo autoasigna. */
   gerenteId?: string | null;
   equipo: ProyectoEquipoMiembro[];
@@ -203,6 +212,35 @@ export interface Proyecto extends ProyectoInput {
   id: string;
   createdAt: string;
   updatedAt?: string | null;
+}
+
+/** Una página del listado de proyectos (filtrada y paginada en el servidor) + los conteos globales de las tarjetas. */
+export interface ProyectosPagina {
+  items: Proyecto[];
+  total: number;
+  pagina: number;
+  tamanoPagina: number;
+  resumen: {
+    total: number;
+    enCurso: number;
+    proximos30Dias: number;
+    sinProveedor: number;
+    sinGerente: number;
+    proximos7Dias: number;
+  };
+}
+
+export type AlertaProyecto = "sinPm" | "sinProveedor" | "proximos7" | "proximos30";
+
+export interface FiltrosPaginaProyectos {
+  q?: string;
+  estadoId?: string;
+  clienteId?: string;
+  tipo?: string;
+  gerenteId?: string;
+  alerta?: AlertaProyecto | "";
+  page?: number;
+  pageSize?: number;
 }
 
 export interface ProyectoPrioridad {

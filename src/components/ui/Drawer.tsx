@@ -144,7 +144,7 @@ export function DetailBox({
   return (
     <div
       className={`rounded-[var(--radius-lg)] border px-4 py-[15px] ${
-        tone === "muted" ? "border-[#EFEDE7] bg-[#FBFAF7]" : "border-border bg-surface"
+        tone === "muted" ? "border-divider bg-soft" : "border-border bg-surface"
       }`}
     >
       <div className="mb-[11px] flex items-center justify-between gap-2 text-sm font-semibold">

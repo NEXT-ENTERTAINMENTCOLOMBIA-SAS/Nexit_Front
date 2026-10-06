@@ -56,7 +56,7 @@ export function UsuariosSection() {
           {items?.map((u, i) => {
             const estado = u.activo ? CUENTA_ACTIVA_COLOR : CUENTA_INACTIVA_COLOR;
             return (
-              <div key={u.id} className={`flex items-center gap-3 px-4 py-2.5 ${i !== items.length - 1 ? "border-b border-[#EFEDE7]" : ""}`}>
+              <div key={u.id} className={`flex items-center gap-3 px-4 py-2.5 ${i !== items.length - 1 ? "border-b border-divider" : ""}`}>
                 <Avatar nombre={`${u.nombre} ${u.apellido}`} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[13px] font-medium">{`${u.nombre} ${u.apellido}`.trim()}</div>

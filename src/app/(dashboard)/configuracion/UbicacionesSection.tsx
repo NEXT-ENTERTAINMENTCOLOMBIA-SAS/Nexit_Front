@@ -138,7 +138,7 @@ export function UbicacionesSection() {
       {/* Columna izquierda: países -- siempre visible, no se mueve al elegir uno (2026-09-10). */}
       <div className="flex flex-col gap-2 min-[1001px]:w-[300px] min-[1001px]:flex-shrink-0">
         <div className="flex flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface shadow-[0_1px_3px_rgba(12,12,12,.04)] transition-shadow hover:shadow-[0_2px_10px_rgba(12,12,12,.07)]">
-          <div className="border-b border-[#EFEDE7] px-3 py-2.5" style={{ background: "var(--blue-light)" }}>
+          <div className="border-b border-divider px-3 py-2.5" style={{ background: "var(--blue-light)" }}>
             <div className="flex gap-1.5">
               <Input
                 value={nuevoPaisNombre}
@@ -154,7 +154,7 @@ export function UbicacionesSection() {
           </div>
 
           {paises.length > BUSCADOR_DESDE && (
-            <div className="flex items-center gap-2 border-b border-[#EFEDE7] px-3 py-2">
+            <div className="flex items-center gap-2 border-b border-divider px-3 py-2">
               <Search size={13} strokeWidth={1.8} className="flex-shrink-0 text-text-3" />
               <input
                 value={busquedaPais}
@@ -173,7 +173,7 @@ export function UbicacionesSection() {
             {paisesVisibles.map((p, idx) => (
               <div
                 key={p.id}
-                className={`flex items-center gap-1.5 px-3 py-2.5 ${idx !== paisesVisibles.length - 1 ? "border-b border-[#EFEDE7]" : ""}`}
+                className={`flex items-center gap-1.5 px-3 py-2.5 ${idx !== paisesVisibles.length - 1 ? "border-b border-divider" : ""}`}
                 style={paisId === p.id ? { background: "var(--blue-light)" } : undefined}
               >
                 {editandoPais?.id === p.id ? (

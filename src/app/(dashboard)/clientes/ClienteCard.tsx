@@ -41,7 +41,7 @@ export function ClienteCard({ cliente, onOpen, onEdit }: { cliente: Cliente; onO
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-[#EFEDE7] pt-3">
+      <div className="flex flex-wrap items-center gap-2 border-t border-divider pt-3">
         <Badge bg={sc.bg} color={sc.c}>
           {cliente.estado}
         </Badge>
