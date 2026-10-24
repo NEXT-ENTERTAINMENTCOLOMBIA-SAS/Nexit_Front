@@ -87,6 +87,21 @@ describe("useAuthStore -- un refresco de token de la MISMA cuenta no reinicia el
     expect(useAuthStore.getState().estadoPerfil).toBe("completo");
     expect(meMock).toHaveBeenCalledTimes(1);
   });
+
+  it("TOKEN_REFRESHED conserva el nombre y las iniciales reales (antes los pisaba con los del correo)", async () => {
+    meMock.mockResolvedValue({ id: "user-1", nombre: "Juliana", apellido: "Navarro", iniciales: "", email: "usuario@empresa.com", rol: "admin", activo: true });
+    const { useAuthStore } = await import("./auth-store");
+
+    authStateCallback!("SIGNED_IN", session("usuario@empresa.com", "user-1"));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(useAuthStore.getState().user?.displayName).toBe("Juliana Navarro");
+    expect(useAuthStore.getState().user?.initials).toBe("JN");
+
+    authStateCallback!("TOKEN_REFRESHED", session("usuario@empresa.com", "user-1"));
+    expect(useAuthStore.getState().user?.displayName).toBe("Juliana Navarro");
+    expect(useAuthStore.getState().user?.initials).toBe("JN");
+  });
 });
 
 describe("useAuthStore -- guarda contra condición de carrera al cambiar de sesión", () => {

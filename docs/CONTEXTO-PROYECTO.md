@@ -7,7 +7,8 @@
 > este archivo es el complemento: como encaja el front con el resto del
 > sistema (backend, roles, despliegue).
 >
-> Ultima verificacion: 2026-09-23.
+> Ultima verificacion: 2026-10-23. El "donde quedamos" y los pendientes viven en
+> `ESTADO-ACTUAL.md`.
 
 ## Que es
 
@@ -16,7 +17,7 @@ Frontend de Nexit (gestion de clientes, proveedores y proyectos), Next.js 16
 `Nexit_Back` (.NET 8) via `src/lib/api-client.ts`. Usa Supabase Auth
 directo desde el navegador (`src/lib/supabase-client.ts`, `@supabase/ssr`)
 **solo** para login con codigo OTP y recuperar contrasena -- todo lo demas
-(clientes, proveedores, proyectos, usuarios, catalogos, adjuntos, informes)
+(clientes, proveedores, proyectos, usuarios, catalogos, adjuntos, project managers)
 pasa siempre por la API del backend, nunca directo a Supabase.
 
 `src/proxy.ts` (el equivalente actual de `middleware.ts` en Next.js 16)
@@ -45,13 +46,24 @@ apunta al backend en Railway.
 ## Estructura
 
 - `src/app/` -- rutas (App Router); `(dashboard)/` agrupa las paginas
-  protegidas (clientes, proveedores, proyectos, usuarios, calendario,
-  informe, configuracion). `login/`, `registro/` son publicas.
+  protegidas (clientes, proveedores, proyectos, project-managers, usuarios,
+  configuracion; la lista vive en `src/lib/nav-items.ts`). `login/` es la unica ruta publica; `registro/` exige sesion (es donde
+  completa su perfil quien fue invitado).
 - `src/components/ui/` -- componentes de UI reutilizables.
 - `src/services/api/` -- llamadas a la API del backend.
 - `src/store/` -- estado global (Zustand), uno por dominio.
 - `src/lib/` -- clientes de API/Supabase, utilidades transversales.
 - `src/proxy.ts` -- validacion de sesion server-side por ruta.
+
+## Flujo de autenticacion y registro
+
+- Entrada: `/login` (correo -> codigo OTP de un solo uso -> crear contrasena, o correo + contrasena).
+  `GET /api/auth/estado-cuenta` decide si saltar directo al paso de contrasena.
+- Quien tiene sesion pero no fila en `usuarios` queda en `estadoPerfil = "sin-perfil"` (auth-store) y el
+  dashboard lo manda a `/registro`: nombre y apellido, y contrasena solo si todavia no la creo.
+- "Ya tiene contrasena" se sabe por dos marcas: `user_metadata.password_set` de Supabase (puesta junto con
+  la contrasena, ver `src/lib/password-status.ts`) y `usuarios.contrasena_configurada` del backend. La del
+  backend solo se puede poner cuando ya existe el perfil.
 
 ## CI
 

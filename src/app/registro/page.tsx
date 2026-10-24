@@ -12,7 +12,7 @@ import { ApiError } from "@/lib/api-client";
 import { getLastSection } from "@/lib/last-section";
 import { supabase } from "@/lib/supabase-client";
 import { validatePassword } from "@/lib/password-policy";
-import { authApi } from "@/services/api";
+import { PASSWORD_SET_METADATA, confirmarContrasenaEnBackend, tieneContrasenaMarcada } from "@/lib/password-status";
 import { invitacionesApi } from "@/services/api/invitaciones-service";
 import { useAuthStore } from "@/store/auth-store";
 import { useUiStore } from "@/store/ui-store";
@@ -107,12 +107,49 @@ export default function RegistroPage() {
         nombre: nombre.trim(),
         apellido: apellido.trim(),
       });
+      // Si esta persona ya creó su contraseña antes de llegar acá (por ejemplo, entró primero por
+      // /login con código), no se la pedimos otra vez -- ese era el bug de "crear contraseña dos
+      // veces". Si algo falla al entrar, cae al paso de contraseña como respaldo (el perfil ya existe).
+      if (await yaTieneContrasena()) {
+        try {
+          await entrarAlSistema();
+          return;
+        } catch {
+          // Cae al paso de contraseña de abajo.
+        }
+      }
       setPaso("contrasena");
     } catch (error) {
       setErrorFormulario(error instanceof Error ? error.message : "No se pudo crear tu perfil.");
     } finally {
       setEnviando(false);
     }
+  }
+
+  /** ¿Esta cuenta ya creó su contraseña? Ver password-status.ts. Ante cualquier duda, false (se la pide). */
+  async function yaTieneContrasena(): Promise<boolean> {
+    try {
+      const { data } = await supabase.auth.getUser();
+      return tieneContrasenaMarcada(data.user);
+    } catch {
+      return false;
+    }
+  }
+
+  /** Cierre común del registro (con contraseña recién creada o ya existente): ya hay fila en
+   * `usuarios`, así que ahora sí se puede marcar la contraseña en el backend, y el token se
+   * refresca para que traiga el rol real (ver comentario más abajo). */
+  async function entrarAlSistema() {
+    await confirmarContrasenaEnBackend();
+    // El rol viaja en el JWT, y lo pone el Auth Hook de Supabase leyendo `usuarios` (ver
+    // docs/schema/03_auth_hook_custom_claims.sql). El token que esta persona tiene en la mano
+    // se emitió ANTES de que existiera su fila, así que todavía dice "miembro" sin importar el
+    // rol que le hayan propuesto. Refrescar la sesión vuelve a correr el hook y trae el rol
+    // real -- sin esto entraría con permisos de miembro hasta que su token venciera solo.
+    await supabase.auth.refreshSession();
+    await recargarPerfil();
+    pushToast("Listo, tu cuenta quedó creada", "success");
+    router.replace(getLastSection());
   }
 
   /** Paso 2: crea la contraseña de verdad (hasta acá, la sesión era la temporal del enlace del
@@ -126,27 +163,12 @@ export default function RegistroPage() {
     setEnviando(true);
     setErrorFormulario(null);
     try {
-      const { error: err } = await supabase.auth.updateUser({ password });
+      const { error: err } = await supabase.auth.updateUser({ password, data: PASSWORD_SET_METADATA });
       if (err) {
         setErrorFormulario(err.message);
         return;
       }
-      try {
-        // Best-effort (docs/30): marca la cuenta como "recurrente" para la próxima vez. Si falla,
-        // no bloquea la entrada -- el enlace manual de respaldo en /login sigue disponible.
-        await authApi.confirmarContrasena();
-      } catch {
-        // Silencioso a propósito -- ver comentario de arriba.
-      }
-      // El rol viaja en el JWT, y lo pone el Auth Hook de Supabase leyendo `usuarios` (ver
-      // docs/schema/03_auth_hook_custom_claims.sql). El token que esta persona tiene en la mano
-      // se emitió ANTES de que existiera su fila, así que todavía dice "miembro" sin importar el
-      // rol que le hayan propuesto. Refrescar la sesión vuelve a correr el hook y trae el rol
-      // real -- sin esto entraría con permisos de miembro hasta que su token venciera solo.
-      await supabase.auth.refreshSession();
-      await recargarPerfil();
-      pushToast("Listo, tu cuenta quedó creada", "success");
-      router.replace(getLastSection());
+      await entrarAlSistema();
     } catch (error) {
       setErrorFormulario(error instanceof Error ? error.message : "No se pudo crear tu contraseña.");
     } finally {

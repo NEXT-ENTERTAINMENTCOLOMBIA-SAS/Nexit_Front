@@ -13,6 +13,7 @@ import { authApi } from "@/services/api";
 import { ApiError } from "@/lib/api-client";
 import { supabase } from "@/lib/supabase-client";
 import { validatePassword } from "@/lib/password-policy";
+import { PASSWORD_SET_METADATA, confirmarContrasenaEnBackend, tieneContrasenaMarcada } from "@/lib/password-status";
 import { esDominioPermitido, mensajeDominioNoPermitido } from "@/lib/dominios-correo";
 import { getLastSection } from "@/lib/last-section";
 import styles from "@/styles/login.module.css";
@@ -102,6 +103,11 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // true cuando la persona llegó al paso de contraseña por el enlace manual "¿Ya tienes contraseña?"
+  // (es decir, el backend NO la tenía marcada como recurrente): si inicia sesión bien, es prueba de
+  // que sí tiene contraseña, así que se corrige la marca para que el próximo ingreso no vuelva a
+  // pedirle crearla.
+  const [marcaPorVerificar, setMarcaPorVerificar] = useState(false);
 
   // Autodetección "recurrente" al cargar la pantalla (docs/30): si el correo
   // recordado ya tiene contraseña configurada, salta directo al paso de
@@ -125,7 +131,9 @@ export default function LoginPage() {
     authApi
       .estadoCuenta(correoRecordado)
       .then((estado) => {
-        if (estado.tieneContrasena) setStep("password");
+        // Solo si sigue en el paso de correo: si ya pidió código o escribió otra cosa mientras
+        // llegaba la respuesta, no se la arrebata.
+        if (estado.tieneContrasena) setStep((actual) => (actual === "email" ? "password" : actual));
       })
       .catch(() => {
         // Silencioso a propósito -- ver comentario de arriba.
@@ -198,10 +206,18 @@ export default function LoginPage() {
     setError(null);
     if (!code.trim()) return setError("Escribe el código que te llegó por correo.");
     setSubmitting(true);
-    const { error: err } = await supabase.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: "email" });
+    const { data, error: err } = await supabase.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: "email" });
     setSubmitting(false);
     if (err) return setError(err.message);
     setCode("");
+    // Si esta cuenta ya creó su contraseña antes (aunque el backend todavía no lo sepa, por ejemplo
+    // porque no había terminado su registro), no se la volvemos a pedir: ver password-status.ts.
+    if (tieneContrasenaMarcada(data.user ?? data.session?.user)) {
+      rememberEmail(email.trim());
+      await confirmarContrasenaEnBackend();
+      goToDashboard();
+      return;
+    }
     setStep("create-password");
   }
 
@@ -210,18 +226,15 @@ export default function LoginPage() {
     const validationError = validatePassword(password, confirmPassword);
     if (validationError) return setError(validationError);
     setSubmitting(true);
-    const { error: err } = await supabase.auth.updateUser({ password });
+    // La marca `password_set` viaja en el mismo updateUser: así queda guardada aunque esta persona
+    // todavía no tenga perfil (el backend solo puede marcarla cuando ya existe su fila en `usuarios`).
+    const { error: err } = await supabase.auth.updateUser({ password, data: PASSWORD_SET_METADATA });
     setSubmitting(false);
     if (err) return setError(err.message);
     rememberEmail(email.trim());
-    try {
-      // Best-effort (docs/30): marca la cuenta como "recurrente" para la
-      // próxima vez. Si falla, no bloquea el login -- el enlace manual de
-      // respaldo sigue disponible.
-      await authApi.confirmarContrasena();
-    } catch {
-      // Silencioso a propósito -- ver comentario de arriba.
-    }
+    // Best-effort (docs/30): marca la cuenta como "recurrente" para la próxima vez. Si falla, no
+    // bloquea el login -- el enlace manual de respaldo sigue disponible.
+    await confirmarContrasenaEnBackend();
     pushToast("Contraseña creada", "success");
     goToDashboard();
   }
@@ -235,6 +248,7 @@ export default function LoginPage() {
     setSubmitting(false);
     if (err) return setError(err.message);
     rememberEmail(email.trim());
+    if (marcaPorVerificar) void confirmarContrasenaEnBackend();
     goToDashboard();
   }
 
@@ -266,15 +280,11 @@ export default function LoginPage() {
     const validationError = validatePassword(password, confirmPassword);
     if (validationError) return setError(validationError);
     setSubmitting(true);
-    const { error: err } = await supabase.auth.updateUser({ password });
+    const { error: err } = await supabase.auth.updateUser({ password, data: PASSWORD_SET_METADATA });
     setSubmitting(false);
     if (err) return setError(err.message);
-    try {
-      // Best-effort (docs/30) -- ver comentario de crearContrasena().
-      await authApi.confirmarContrasena();
-    } catch {
-      // Silencioso a propósito.
-    }
+    // Best-effort (docs/30) -- ver comentario de crearContrasena().
+    await confirmarContrasenaEnBackend();
     pushToast("Contraseña actualizada", "success");
     goToDashboard();
   }
@@ -315,6 +325,7 @@ export default function LoginPage() {
                 className="mt-4 block cursor-pointer text-center text-[13px] text-text-3 hover:underline"
                 onClick={() => {
                   setError(null);
+                  setMarcaPorVerificar(true);
                   setStep("password");
                 }}
               >

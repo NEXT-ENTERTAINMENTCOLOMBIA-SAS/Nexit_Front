@@ -10,11 +10,23 @@
  * ninguna guardada (primera vez), el destino por default es Clientes.
  */
 
+import { NAV } from "@/lib/nav-items";
+
 const KEY = "nexit:lastSection";
 const DEFAULT_SECTION = "/clientes";
 
+/**
+ * Solo se recuerdan / restauran rutas que existen hoy en la navegación. Antes se devolvía lo que
+ * hubiera guardado: quien tenía guardada una sección que después se eliminó (Informes, Calendario)
+ * caía en un 404 justo después de iniciar sesión, cada vez, hasta limpiar el almacenamiento.
+ */
+export function esSeccionValida(pathname: string): boolean {
+  return NAV.some(({ href }) => pathname === href || pathname.startsWith(`${href}/`));
+}
+
 export function rememberSection(pathname: string) {
   if (typeof window === "undefined") return;
+  if (!esSeccionValida(pathname)) return;
   try {
     window.localStorage.setItem(KEY, pathname);
   } catch {
@@ -25,7 +37,8 @@ export function rememberSection(pathname: string) {
 export function getLastSection(): string {
   if (typeof window === "undefined") return DEFAULT_SECTION;
   try {
-    return window.localStorage.getItem(KEY) || DEFAULT_SECTION;
+    const guardada = window.localStorage.getItem(KEY);
+    return guardada && esSeccionValida(guardada) ? guardada : DEFAULT_SECTION;
   } catch {
     return DEFAULT_SECTION;
   }

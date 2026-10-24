@@ -162,9 +162,18 @@ export const useAuthStore = create<AuthState>((set) => {
   const handleSession = (session: Session | null) => {
     const userIdNuevo = session?.user?.id ?? null;
     if (userIdNuevo === userIdActual) {
-      // Mismo usuario, token renovado: se actualiza el JWT aproximado por si el rol cambió, sin
-      // tocar estadoPerfil ni volver a pedir el perfil -- nada de esto debe verse en la interfaz.
-      if (session) set({ user: buildUserFromSession(session) });
+      // Mismo usuario, token renovado: solo se actualiza el rol (por si cambió), sin tocar
+      // estadoPerfil ni volver a pedir el perfil -- nada de esto debe verse en la interfaz.
+      // Ojo: NO se reemplaza `user` por la aproximación del correo (buildUserFromSession). Antes sí,
+      // y cada refresco de token (varias veces por hora, o al volver a la pestaña) pisaba el nombre
+      // y las iniciales reales de /api/usuarios/me por los derivados del correo.
+      if (session) {
+        set((state) => {
+          if (state.estadoPerfil !== "completo" || !state.user) return { user: buildUserFromSession(session) };
+          const rolDelToken = decodeJwtRole(session.access_token);
+          return rolDelToken ? { user: { ...state.user, rol: rolDelToken as Rol } } : {};
+        });
+      }
       return;
     }
     userIdActual = userIdNuevo;
